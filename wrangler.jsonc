@@ -3,5 +3,9 @@
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./public"
-  }
+  },
+  "routes": [
+    { "pattern": "bluebeeops.com", "custom_domain": true },
+    { "pattern": "www.bluebeeops.com", "custom_domain": true }
+  ]
 }
