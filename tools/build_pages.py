@@ -6,6 +6,9 @@ import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
 UPDATED = "October 6, 2026"
 EMAIL = '<a href="mailto:definingmoments72@gmail.com">definingmoments72@gmail.com</a>'
+# Public business email. Shown on the home page header/footer only. The /sms-consent, /privacy and
+# /terms pages (and the matching policy sections) keep EMAIL until the A2P campaign review is finished.
+BIZ_EMAIL = '<a href="mailto:jase@bluebeeops.com">jase@bluebeeops.com</a>'
 PROGRAM = "Jase Nations call-message confirmations"
 SCRIPT = ("Would you like one text confirming your message reached Jase Nations? It comes from this number, "
           "206-855-3743. It's optional. Msg and data rates may apply. Reply STOP to opt out or HELP for help. "
@@ -41,7 +44,9 @@ STYLE = """
     a { color:var(--accent); }
 """
 
-def page(title, desc, body):
+def page(title, desc, body, home=False):
+    email_line = f'\n      <p class="lede phone">Email: {BIZ_EMAIL}</p>' if home else ""
+    footer_email = BIZ_EMAIL if home else EMAIL
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,7 +61,7 @@ def page(title, desc, body):
     <div class="wrap">
       <h1>Jase Nations (Blue Bee Ops)</h1>
       <p class="lede">AI call assistant for <strong>Jase Nations</strong>, sole proprietor (doing business as Blue Bee Ops), Washington</p>
-      <p class="lede phone">Phone: <a href="tel:+12068553743">+1 206-855-3743</a></p>
+      <p class="lede phone">Phone: <a href="tel:+12068553743">+1 206-855-3743</a></p>{email_line}
       <nav aria-label="Pages">
         <a href="/">Home</a>
         <a href="/sms-consent">SMS Consent</a>
@@ -71,7 +76,7 @@ def page(title, desc, body):
   </main>
 
   <footer>
-    <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington · +1 206-855-3743 · {EMAIL}</p>
+    <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington · +1 206-855-3743 · {footer_email}</p>
     <p><a href="/sms-consent">SMS Consent</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">SMS Terms</a></p>
     <p>Last updated: {UPDATED}</p>
   </footer>
@@ -185,7 +190,8 @@ RECORDING = """    <section id="recording" aria-labelledby="recording-heading">
 pages = {
     "index.html": page("Jase Nations (Blue Bee Ops): SMS Consent, Privacy &amp; Terms",
                        "Jase Nations (Blue Bee Ops) AI call assistant (+1 206-855-3743): SMS consent script, privacy policy, and SMS terms.",
-                       ABOUT + consent("consent-heading") + privacy("privacy-heading") + terms("terms-heading") + RECORDING),
+                       ABOUT + consent("consent-heading") + privacy("privacy-heading") + terms("terms-heading") + RECORDING,
+                       home=True),
     "sms-consent.html": page("SMS Consent | Jase Nations (Blue Bee Ops)",
                              "How callers opt in to one confirmation text from Jase Nations (Blue Bee Ops), +1 206-855-3743.",
                              consent("consent-heading") + RECORDING),
