@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Harborline demo line | Blue Bee Ops</title>
+  <meta name="description" content="Call Harborline Heating & Air, a demo shop, and watch the call fill in live.">
+  <!-- Not indexed until Jase opens the line to the public (launch gate). -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#04060d">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="/demo/demo.css">
+  <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->
+  <script type="application/json" id="demo-config">
+    { "apiBase": "https://demo-api.bluebeeops.com", "turnstileSiteKey": "REPLACE_WITH_TURNSTILE_SITE_KEY" }
+  </script>
+  <script src="/demo/vendor/qrcode-generator-2.0.4.js" defer></script>
+  <script src="/demo/demo.js" defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="demo-banner" role="note">Demo shop &mdash; not a real contractor</div>
+
+  <header class="top">
+    <div class="wrap">
+      <a class="home" href="/">&larr; Blue Bee Ops</a>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <section class="intro">
+      <p class="eyebrow">Live demo</p>
+      <h1>Call it and watch it fill.</h1>
+      <p class="lead">Call <strong>Harborline Heating &amp; Air</strong>, a made-up heating and air shop. Tell it about a problem like a homeowner would. The card below fills in while you talk.</p>
+    </section>
+
+    <div class="grid">
+      <section class="panel glass" id="line" aria-labelledby="line-h">
+        <h2 id="line-h">Your demo number</h2>
+
+        <!-- state: start -->
+        <div data-state="start">
+          <p class="muted">Quick check that you're a person, then we'll hold a demo line for you for 15 minutes.</p>
+          <p class="note" id="mode-note" hidden>Right now the line is open for scheduled demos only. If you have one booked, go ahead.</p>
+          <div id="ts-widget" class="turnstile"></div>
+          <button type="button" class="btn btn-gold" id="get-number" disabled>Get a demo number</button>
+          <p class="err" id="start-err" role="alert" hidden></p>
+        </div>
+
+        <!-- state: leased -->
+        <div data-state="leased" hidden>
+          <p class="number" id="number" aria-live="polite"></p>
+          <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
+          <figure class="qr">
+            <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
+            <figcaption>Or scan with your phone's camera to call.</figcaption>
+          </figure>
+          <p class="note"><strong>This call is recorded.</strong> You'll hear that at the start of the call too.</p>
+          <p class="muted small" id="lease-note">We're holding this line for you while this page is open.</p>
+        </div>
+
+        <!-- state: busy -->
+        <div data-state="busy" hidden>
+          <p class="big">All demo lines are busy.</p>
+          <p class="muted" id="busy-msg">Try again in a few minutes.</p>
+          <button type="button" class="btn btn-ghost" id="retry">Try again</button>
+        </div>
+
+        <!-- state: closed -->
+        <div data-state="closed" hidden>
+          <p class="big" id="closed-title">The demo line is closed right now.</p>
+          <p class="muted" id="closed-msg">Please check back later.</p>
+        </div>
+      </section>
+
+      <section class="panel glass card" id="capture" aria-labelledby="cap-h">
+        <div class="card-head">
+          <h2 id="cap-h">Live Capture</h2>
+          <span class="badge" id="live-badge" hidden>Live</span>
+        </div>
+        <p class="status muted" id="call-status" aria-live="polite">Waiting for your call.</p>
+        <dl class="fields">
+          <div class="field" data-field="name"><dt>Name</dt><dd>&mdash;</dd></div>
+          <div class="field" data-field="callback"><dt>Callback</dt><dd>&mdash;</dd></div>
+          <div class="field" data-field="issue"><dt>Issue</dt><dd>&mdash;</dd></div>
+          <div class="field" data-field="urgency"><dt>Urgency</dt><dd>&mdash;</dd></div>
+        </dl>
+        <p class="muted small">The callback number only shows after you confirm the read-back, and it's masked because this screen may be public.</p>
+      </section>
+    </div>
+
+    <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts. Calls are limited to about 2&frac12; minutes and 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
+  </main>
+</body>
+</html>
