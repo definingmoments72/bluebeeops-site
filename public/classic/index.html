@@ -1,188 +1,27 @@
-#!/usr/bin/env python3
-"""Generates public/classic/index.html (the previous light marketing home page, kept as a noindex backup at /classic)
-and sms-consent.html, privacy.html, terms.html (A2P policy pages built from shared sections).
-The live home page, public/index.html, is hand-written static HTML with public/css/home.css and public/js/home.js.
-Static assets on Workers serve /privacy -> privacy.html (html_handling: auto-trailing-slash).
-Images in public/img and the favicons come from assets/blue-bee-ops-logo.jpg via tools/build_images.py;
-this script only writes HTML and needs nothing beyond the standard library.
-Run: python3 tools/build_pages.py"""
-import os
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
-UPDATED = "October 6, 2026"
-EMAIL = '<a href="mailto:definingmoments72@gmail.com">definingmoments72@gmail.com</a>'
-# Public business email, used on the home page only. The /sms-consent, /privacy and /terms pages keep
-# EMAIL and must stay unchanged until the A2P campaign review is finished.
-BIZ_EMAIL_ADDR = "jase@bluebeeops.com"
-PHONE_DISPLAY = "206-855-3743"
-PHONE_TEL = "+12068553743"
-PROGRAM = "Jase Nations call-message confirmations"
-SCRIPT = ("Would you like one text confirming your message reached Jase Nations? It comes from this number, "
-          "206-855-3743. It's optional. Msg and data rates may apply. Reply STOP to opt out or HELP for help. "
-          "Terms and privacy are at bluebeeops.com. Is that okay?")
-CLAUSE = ("No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. "
-          "Text messaging originator opt-in data and consent will not be shared with any third parties.")
-SAMPLE1 = ("Jase Nations (Blue Bee Ops): Hi [first name], your message was passed to Jase. He'll get back to you "
-           "[timeframe]. Msg &amp; data rates may apply. Reply HELP for help, STOP to opt out.")
-SAMPLE2 = ("Jase Nations (Blue Bee Ops): Confirming we received your message for Jase at [time] on [date]. "
-           "No further texts will be sent. Reply HELP for help or STOP to opt out.")
-
-STYLE = """
-    :root { --text:#1a1a1a; --muted:#555; --border:#e2e2e2; --bg:#fafafa; --accent:#1a5f7a; --script-bg:#f0f7fa; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height:1.55; color:var(--text); background:#fff; }
-    header { background:var(--bg); border-bottom:1px solid var(--border); padding:1.75rem 1.25rem; }
-    .wrap { max-width:42rem; margin:0 auto; }
-    main { max-width:42rem; margin:0 auto; padding:1.5rem 1.25rem 3rem; }
-    h1 { margin:0 0 0.35rem; font-size:1.65rem; font-weight:700; color:var(--accent); }
-    h2 { margin:2.25rem 0 0.75rem; font-size:1.2rem; font-weight:650; padding-top:0.5rem; border-top:1px solid var(--border); }
-    h2:first-of-type { border-top:none; padding-top:0; }
-    h3 { font-size:1rem; margin:1.5rem 0 0.5rem; }
-    .lede { color:var(--muted); margin:0.25rem 0 0; }
-    .phone { font-weight:600; }
-    nav { margin-top:1rem; font-size:0.9rem; }
-    nav a { color:var(--accent); margin-right:1rem; text-decoration:none; }
-    nav a:hover { text-decoration:underline; }
-    .script { background:var(--script-bg); border-left:4px solid var(--accent); padding:1rem 1.1rem; margin:1rem 0; font-size:1.05rem; }
-    .script strong { display:block; margin-bottom:0.4rem; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); }
-    .convo p { margin:0.4rem 0; }
-    ul { padding-left:1.25rem; } li { margin:0.35rem 0; }
-    footer { max-width:42rem; margin:0 auto; padding:0 1.25rem 2.5rem; font-size:0.85rem; color:var(--muted); }
-    a { color:var(--accent); }
-"""
-
-def page(title, desc, body):
-    return f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
-  <meta name="description" content="{desc}">
-  <style>{STYLE}  </style>
-</head>
-<body>
-  <header>
-    <div class="wrap">
-      <h1>Jase Nations (Blue Bee Ops)</h1>
-      <p class="lede">AI call assistant for <strong>Jase Nations</strong>, sole proprietor (doing business as Blue Bee Ops), Washington</p>
-      <p class="lede phone">Phone: <a href="tel:+12068553743">+1 206-855-3743</a></p>
-      <nav aria-label="Pages">
-        <a href="/">Home</a>
-        <a href="/sms-consent">SMS Consent</a>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">SMS Terms</a>
-      </nav>
-    </div>
-  </header>
-
-  <main>
-{body}
-  </main>
-
-  <footer>
-    <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington · +1 206-855-3743 · {EMAIL}</p>
-    <p><a href="/sms-consent">SMS Consent</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">SMS Terms</a></p>
-    <p>Last updated: {UPDATED}</p>
-  </footer>
-</body>
-</html>
-"""
-
-def consent(hid):
-    return f"""    <section id="sms-consent" aria-labelledby="{hid}">
-      <h2 id="{hid}">SMS Consent ({PROGRAM})</h2>
-      <p>
-        There is one way to opt in: <strong>verbally, on a phone call</strong> to Jase Nations' business line,
-        <strong>+1 206-855-3743</strong>. An AI call assistant answers and takes the caller's message.
-        Only after the message is taken does the assistant ask this exact question:
-      </p>
-      <div class="script" role="note">
-        <strong>Exact verbal consent script</strong>
-        “{SCRIPT}”
-      </div>
-      <ul>
-        <li><strong>A text is sent only if the caller clearly says yes.</strong> If they say no or don't answer, no text is sent.</li>
-        <li><strong>Optional:</strong> agreeing to the text is not required to leave a message.</li>
-        <li><strong>Frequency:</strong> one confirmation text per call in which the caller says yes. No recurring or marketing messages.</li>
-        <li><strong>Rates:</strong> message and data rates may apply.</li>
-        <li><strong>Help / opt-out:</strong> reply <strong>HELP</strong> for help or <strong>STOP</strong> to opt out at any time. Help is also available at {EMAIL}.</li>
-        <li><strong>Sender:</strong> texts come from +1 206-855-3743 and are identified as “Jase Nations (Blue Bee Ops)”.</li>
-      </ul>
-      <h3>Sample conversation</h3>
-      <div class="convo">
-        <p><strong>Assistant:</strong> “Hi there! This is the assistant for Jase Nations. This call may be recorded. He's unavailable right now. May I ask who's calling?”</p>
-        <p><strong>Caller:</strong> “This is Bob. I'm calling about a window cleaning estimate.”</p>
-        <p><strong>Assistant:</strong> “Thanks, Bob! What's the best number for Jase to reach you?”</p>
-        <p><strong>Caller:</strong> “[callback number].”</p>
-        <p><strong>Assistant:</strong> “{SCRIPT}”</p>
-        <p><strong>Caller:</strong> “Yes.”</p>
-        <p><strong>Assistant:</strong> “Thanks, I've noted that. I'll let Jase know you called about the window cleaning estimate. He'll get back to you as soon as he can. Have a great day!”</p>
-      </div>
-      <h3>Confirmation text the caller receives</h3>
-      <p><em>“{SAMPLE1}”</em></p>
-      <h3>How consent is recorded</h3>
-      <p>
-        Every call starts with a notice that the call may be recorded. The call recording, transcript, date and time,
-        the caller's phone number, and the caller's answer to the consent question are kept in the call log as the record of consent.
-      </p>
-      <p><strong>{CLAUSE}</strong> See the <a href="/privacy">Privacy Policy</a> and <a href="/terms">SMS Terms</a>.</p>
-    </section>
-"""
-
-def privacy(hid):
-    return f"""    <section id="privacy" aria-labelledby="{hid}">
-      <h2 id="{hid}">Privacy Policy</h2>
-      <p><strong>{CLAUSE}</strong></p>
-      <p>We do not sell, rent, or share your phone number or personal information with anyone for their marketing.</p>
-      <p>What we collect and why:</p>
-      <ul>
-        <li><strong>Call information</strong>: caller ID, the callback number you give, and the message you leave, so Jase can follow up.</li>
-        <li><strong>Call recordings and transcripts</strong>: calls may be recorded (announced at the start of every call) for message-taking, quality, and as the record of any texting consent.</li>
-        <li><strong>SMS</strong>: used only for the {PROGRAM} program, which sends one confirmation text to callers who say yes on the call.</li>
-        <li><strong>Frequency</strong>: one text per call in which the caller says yes.</li>
-        <li><strong>Rates</strong>: message and data rates may apply from your carrier.</li>
-        <li><strong>Opt-out</strong>: reply STOP to any text to stop receiving texts; reply HELP for help.</li>
-      </ul>
-      <p>
-        Questions about this policy or your data: email {EMAIL}.
-        See also the <a href="/terms">SMS Terms</a>.
-      </p>
-    </section>
-"""
-
-def terms(hid):
-    return f"""    <section id="sms-terms" aria-labelledby="{hid}">
-      <h2 id="{hid}">SMS Terms ({PROGRAM})</h2>
-      <ul>
-        <li><strong>Program:</strong> {PROGRAM}, sent by Jase Nations (sole proprietor, doing business as Blue Bee Ops) from +1 206-855-3743.</li>
-        <li><strong>What you get:</strong> one text confirming that your phone message reached Jase. It is sent only if you say yes when the assistant asks on the call.</li>
-        <li><strong>Optional:</strong> saying yes is not required to leave a message.</li>
-        <li><strong>Frequency:</strong> one text per call in which you say yes. No recurring or marketing messages.</li>
-        <li><strong>Rates:</strong> message and data rates may apply.</li>
-        <li><strong>Opt-out:</strong> reply <strong>STOP</strong> to any text to opt out. You'll get one confirmation of the opt-out, and no further texts will be sent unless you opt in again on a future call.</li>
-        <li><strong>Help:</strong> reply <strong>HELP</strong> for help, or email {EMAIL}.</li>
-        <li>Carriers are not liable for delayed or undelivered messages.</li>
-        <li><strong>Privacy:</strong> see our <a href="/privacy">Privacy Policy</a>. {CLAUSE}</li>
-      </ul>
-    </section>
-"""
-
-RECORDING = """    <section id="recording" aria-labelledby="recording-heading">
-      <h2 id="recording-heading">Call Recording Notice (Washington)</h2>
-      <p>
-        Calls to +1 206-855-3743 <strong>may be recorded</strong> for message-taking, quality, and consent records.
-        Washington is a two-party consent state. The assistant announces recording at the
-        start of every call so you can choose whether to continue.
-      </p>
-    </section>
-"""
-
-# ---------------------------------------------------------------------------------------------
-# Home page (marketing). Copy follows the walk-in pitch: only the 78% / 42% (CallRail 2025) and
-# about $341 (Angi) stats, no guarantees, no emergency claims, Coverage Service does not book jobs.
-# ---------------------------------------------------------------------------------------------
-
-HOME_STYLE = """
+  <title>Blue Bee Ops | Missed-call and after-hours answering for Kitsap County trades shops</title>
+  <meta name="description" content="Blue Bee Ops answers the calls you miss on the job, in your shop's name, and texts you the caller's name, number, and what they need. Coverage Service is $149 a month with no setup fee. Call Jase at 206-855-3743.">
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="https://bluebeeops.com/">
+  <meta name="theme-color" content="#0a1a44">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Blue Bee Ops">
+  <meta property="og:title" content="Blue Bee Ops: catch the calls you miss on the job">
+  <meta property="og:description" content="Blue Bee Ops answers the calls you miss on the job, in your shop's name, and texts you the caller's name, number, and what they need. Coverage Service is $149 a month with no setup fee. Call Jase at 206-855-3743.">
+  <meta property="og:url" content="https://bluebeeops.com/">
+  <meta property="og:image" content="https://bluebeeops.com/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" as="image" type="image/webp" href="/img/emblem-128.webp">
+  <style>
     :root {
       --ink:#0f1b33; --muted:#4b5567; --paper:#f8f7f3; --surface:#fff; --line:#e3e0d6;
       --lapis:#1d3f99; --lapis-hover:#16327c; --navy:#0a1a44; --navy-2:#06122f;
@@ -392,98 +231,9 @@ HOME_STYLE = """
       .faq .container { grid-template-columns:.8fr 1.2fr; gap:3.5rem; }
       .faq .section-head { position:sticky; top:6rem; }
     }
-"""
-
-ICON_PHONE = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>')
-ICON_MAIL = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-             '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>')
-ICON_REPORT = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-               '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>')
-
-TEL = f'tel:{PHONE_TEL}'
-MAILTO = f'mailto:{BIZ_EMAIL_ADDR}'
-
-PACKAGES = [
-    {
-        "name": "Coverage Service", "tag": "Where most shops start", "featured": True,
-        "price": "$149", "setup": "$0 setup",
-        "summary": "Answers the calls you miss, in your shop's name, and texts you the details right away.",
-        "includes": None,
-        "items": [
-            "Answers your missed and after-hours calls in your shop's name",
-            "Gets the caller's name, number, and what they need",
-            "Texts it to you right away, so you can call back as soon as you're free",
-            "Screens out junk calls",
-            "A daily report for the first two weeks, then a weekly report of everything Blue Bee caught",
-            "Set up with you on a 15-minute call",
-        ],
-        "fine": "Coverage Service takes the details. It doesn't book jobs; you make the callback yourself.",
-        "cta": ("Call Jase about Coverage", TEL, "btn-gold"),
-    },
-    {
-        "name": "Intake Service", "tag": "A step up", "featured": False,
-        "price": "$249", "setup": None,
-        "summary": "For shops that want more of the conversation handled before they call back.",
-        "includes": "Everything in Coverage Service, plus:",
-        "items": [
-            "Helps with daytime overflow, not just missed and after-hours calls",
-            "Goes deeper on intake questions for your kind of work",
-            "Answers more of your common questions",
-            "Lets the caller pick an estimate window, which you confirm with one tap",
-        ],
-        "fine": None,
-        "cta": ("Ask about Intake", f"{MAILTO}?subject=Intake%20Service", "btn-secondary"),
-    },
-    {
-        "name": "Estimate Request Service", "tag": "Top tier", "featured": False,
-        "price": "$349", "setup": "plus $300 to $500 setup",
-        "summary": "For shops that want estimates on the calendar before the caller hangs up.",
-        "includes": "Everything in Intake Service, plus:",
-        "items": [
-            "Books estimates live on the call",
-            "Puts urgent calls straight through to you",
-        ],
-        "fine": "Putting urgent calls through isn't an emergency or dispatch service.",
-        "cta": ("Ask about Estimate Request", f"{MAILTO}?subject=Estimate%20Request%20Service", "btn-secondary"),
-    },
-]
-
-def plan_card(p):
-    cls = "plan featured" if p["featured"] else "plan"
-    hid = "plan-" + p["name"].split()[0].lower()
-    setup = f'\n          <p class="setup">{p["setup"]}</p>' if p["setup"] else '\n          <p class="setup">&nbsp;</p>'
-    includes = f'\n          <p class="includes">{p["includes"]}</p>' if p["includes"] else ""
-    items = "\n".join(f"            <li>{i}</li>" for i in p["items"])
-    fine = f'\n          <p class="fine">{p["fine"]}</p>' if p["fine"] else ""
-    label, href, btn = p["cta"]
-    return f"""        <article class="{cls}" aria-labelledby="{hid}">
-          <span class="tag">{p["tag"]}</span>
-          <h3 id="{hid}">{p["name"]}</h3>
-          <p class="summary">{p["summary"]}</p>
-          <p class="price"><span class="amt">{p["price"]}</span><span class="per">a month</span></p>{setup}{includes}
-          <ul>
-{items}
-          </ul>{fine}
-          <a class="btn {btn}" href="{href}">{label}</a>
-        </article>"""
-
-def picture(stem, sizes, alt, w, h, cls="", lazy=False, slot=None):
-    loading = ' loading="lazy" decoding="async"' if lazy else ""
-    slot = slot or f"{w}px"
-    cls_attr = f' class="{cls}"' if cls else ""
-    webp = ", ".join(f"/img/{stem}-{s}.webp {s}w" for s in sizes)
-    jpg = ", ".join(f"/img/{stem}-{s}.jpg {s}w" for s in sizes)
-    return (f'<picture{cls_attr}><source type="image/webp" srcset="{webp}" sizes="{slot}">'
-            f'<img src="/img/{stem}-{sizes[-1]}.jpg" srcset="{jpg}" sizes="{slot}" width="{w}" height="{h}" alt="{alt}"{loading}></picture>')
-
-WORDMARK = '<span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>'
-
-HOME_TITLE = "Blue Bee Ops | Missed-call and after-hours answering for Kitsap County trades shops"
-HOME_DESC = ("Blue Bee Ops answers the calls you miss on the job, in your shop's name, and texts you the caller's name, "
-             "number, and what they need. Coverage Service is $149 a month with no setup fee. Call Jase at 206-855-3743.")
-
-JSON_LD = f"""{{
+  </style>
+  <script type="application/ld+json">
+  {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
     "name": "Blue Bee Ops",
@@ -492,47 +242,18 @@ JSON_LD = f"""{{
     "image": "https://bluebeeops.com/img/og.jpg",
     "description": "Missed-call and after-hours answering for trades shops in Kitsap County, Washington.",
     "telephone": "+1-206-855-3743",
-    "email": "{BIZ_EMAIL_ADDR}",
-    "founder": {{ "@type": "Person", "name": "Jase Nations" }},
-    "areaServed": {{ "@type": "AdministrativeArea", "name": "Kitsap County, WA" }}
-  }}"""
-
-def home_page():
-    plans = "\n".join(plan_card(p) for p in PACKAGES)
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{HOME_TITLE}</title>
-  <meta name="description" content="{HOME_DESC}">
-  <meta name="robots" content="noindex">
-  <link rel="canonical" href="https://bluebeeops.com/">
-  <meta name="theme-color" content="#0a1a44">
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" href="/favicon.png" type="image/png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Blue Bee Ops">
-  <meta property="og:title" content="Blue Bee Ops: catch the calls you miss on the job">
-  <meta property="og:description" content="{HOME_DESC}">
-  <meta property="og:url" content="https://bluebeeops.com/">
-  <meta property="og:image" content="https://bluebeeops.com/img/og.jpg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="preload" as="image" type="image/webp" href="/img/emblem-128.webp">
-  <style>{HOME_STYLE}  </style>
-  <script type="application/ld+json">
-  {JSON_LD}
+    "email": "jase@bluebeeops.com",
+    "founder": { "@type": "Person", "name": "Jase Nations" },
+    "areaServed": { "@type": "AdministrativeArea", "name": "Kitsap County, WA" }
+  }
   </script>
   <script>
-    const legacyPolicyRoutes = {{
+    const legacyPolicyRoutes = {
       "#sms-consent": "/sms-consent",
       "#privacy": "/privacy",
       "#sms-terms": "/terms",
       "#recording": "/sms-consent#recording"
-    }};
+    };
     const legacyPolicyRoute = legacyPolicyRoutes[window.location.hash];
     if (legacyPolicyRoute) window.location.replace(legacyPolicyRoute);
   </script>
@@ -543,8 +264,8 @@ def home_page():
   <header class="site-header">
     <div class="container">
       <a class="brand" href="/" aria-label="Blue Bee Ops home">
-        {picture("emblem", [128], "", 44, 44)}
-        {WORDMARK}
+        <picture><source type="image/webp" srcset="/img/emblem-128.webp 128w" sizes="44px"><img src="/img/emblem-128.jpg" srcset="/img/emblem-128.jpg 128w" sizes="44px" width="44" height="44" alt=""></picture>
+        <span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>
       </a>
       <nav class="site-nav" aria-label="Main">
         <a href="#how-it-works">How it works</a>
@@ -552,7 +273,7 @@ def home_page():
         <a href="#faq">Questions</a>
         <a href="#contact">Contact</a>
       </nav>
-      <a class="btn btn-primary btn-sm header-call" href="{TEL}">{ICON_PHONE}<span>Call<span class="num"> {PHONE_DISPLAY}</span></span></a>
+      <a class="btn btn-primary btn-sm header-call" href="tel:+12068553743"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg><span>Call<span class="num"> 206-855-3743</span></span></a>
     </div>
   </header>
 
@@ -568,15 +289,15 @@ def home_page():
             them back as soon as you're free.
           </p>
           <div class="cta-row">
-            <a class="btn btn-primary" href="{TEL}">{ICON_PHONE}Call Jase: {PHONE_DISPLAY}</a>
-            <a class="btn btn-secondary" href="{MAILTO}">{ICON_MAIL}{BIZ_EMAIL_ADDR}</a>
+            <a class="btn btn-primary" href="tel:+12068553743"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Call Jase: 206-855-3743</a>
+            <a class="btn btn-secondary" href="mailto:jase@bluebeeops.com"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>jase@bluebeeops.com</a>
           </div>
           <p class="hero-note"><span class="dot" aria-hidden="true"></span>
             <span><strong>Coverage Service is $149 a month, with no setup fee.</strong> I set it up with you myself on a 15-minute call.</span>
           </p>
         </div>
         <div class="hero-visual">
-          {picture("emblem", [128, 512], "Blue Bee Ops logo: a lapis-blue bee with gold wings inside a thin gold circle", 512, 512, "medallion", slot="(min-width: 56rem) 370px, 72vw")}
+          <picture class="medallion"><source type="image/webp" srcset="/img/emblem-128.webp 128w, /img/emblem-512.webp 512w" sizes="(min-width: 56rem) 370px, 72vw"><img src="/img/emblem-512.jpg" srcset="/img/emblem-128.jpg 128w, /img/emblem-512.jpg 512w" sizes="(min-width: 56rem) 370px, 72vw" width="512" height="512" alt="Blue Bee Ops logo: a lapis-blue bee with gold wings inside a thin gold circle"></picture>
           <figure class="text-card">
             <div class="from"><b>Blue Bee Ops</b><span>5:47 PM</span></div>
             <div class="bubble">
@@ -642,7 +363,7 @@ def home_page():
           </li>
         </ol>
         <div class="reports">
-          {ICON_REPORT}
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
           <p><strong>You'll see everything it caught.</strong> For the first two weeks you get a daily report, and after that a weekly report of everything Blue Bee caught, so you can count for yourself whether it's worth it.</p>
         </div>
       </div>
@@ -656,9 +377,54 @@ def home_page():
           <p>Coverage Service is where most shops start. If you want more of the call handled before you pick up the phone, there are two steps up from there.</p>
         </div>
         <div class="plans">
-{plans}
+        <article class="plan featured" aria-labelledby="plan-coverage">
+          <span class="tag">Where most shops start</span>
+          <h3 id="plan-coverage">Coverage Service</h3>
+          <p class="summary">Answers the calls you miss, in your shop's name, and texts you the details right away.</p>
+          <p class="price"><span class="amt">$149</span><span class="per">a month</span></p>
+          <p class="setup">$0 setup</p>
+          <ul>
+            <li>Answers your missed and after-hours calls in your shop's name</li>
+            <li>Gets the caller's name, number, and what they need</li>
+            <li>Texts it to you right away, so you can call back as soon as you're free</li>
+            <li>Screens out junk calls</li>
+            <li>A daily report for the first two weeks, then a weekly report of everything Blue Bee caught</li>
+            <li>Set up with you on a 15-minute call</li>
+          </ul>
+          <p class="fine">Coverage Service takes the details. It doesn't book jobs; you make the callback yourself.</p>
+          <a class="btn btn-gold" href="tel:+12068553743">Call Jase about Coverage</a>
+        </article>
+        <article class="plan" aria-labelledby="plan-intake">
+          <span class="tag">A step up</span>
+          <h3 id="plan-intake">Intake Service</h3>
+          <p class="summary">For shops that want more of the conversation handled before they call back.</p>
+          <p class="price"><span class="amt">$249</span><span class="per">a month</span></p>
+          <p class="setup">&nbsp;</p>
+          <p class="includes">Everything in Coverage Service, plus:</p>
+          <ul>
+            <li>Helps with daytime overflow, not just missed and after-hours calls</li>
+            <li>Goes deeper on intake questions for your kind of work</li>
+            <li>Answers more of your common questions</li>
+            <li>Lets the caller pick an estimate window, which you confirm with one tap</li>
+          </ul>
+          <a class="btn btn-secondary" href="mailto:jase@bluebeeops.com?subject=Intake%20Service">Ask about Intake</a>
+        </article>
+        <article class="plan" aria-labelledby="plan-estimate">
+          <span class="tag">Top tier</span>
+          <h3 id="plan-estimate">Estimate Request Service</h3>
+          <p class="summary">For shops that want estimates on the calendar before the caller hangs up.</p>
+          <p class="price"><span class="amt">$349</span><span class="per">a month</span></p>
+          <p class="setup">plus $300 to $500 setup</p>
+          <p class="includes">Everything in Intake Service, plus:</p>
+          <ul>
+            <li>Books estimates live on the call</li>
+            <li>Puts urgent calls straight through to you</li>
+          </ul>
+          <p class="fine">Putting urgent calls through isn't an emergency or dispatch service.</p>
+          <a class="btn btn-secondary" href="mailto:jase@bluebeeops.com?subject=Estimate%20Request%20Service">Ask about Estimate Request</a>
+        </article>
         </div>
-        <p class="plans-note">You can start with Coverage Service and decide later, once the reports show you what it's catching. Questions about which one fits your shop? Give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a>.</p>
+        <p class="plans-note">You can start with Coverage Service and decide later, once the reports show you what it's catching. Questions about which one fits your shop? Give me a call at <a href="tel:+12068553743">206-855-3743</a>.</p>
       </div>
     </section>
 
@@ -696,7 +462,7 @@ def home_page():
         <div class="section-head">
           <span class="eyebrow">Common questions</span>
           <h2 id="faq-heading">Fair questions, straight answers.</h2>
-          <p>These are the questions shop owners usually ask first. If yours isn't here, give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a> and I'll answer it.</p>
+          <p>These are the questions shop owners usually ask first. If yours isn't here, give me a call at <a href="tel:+12068553743">206-855-3743</a> and I'll answer it.</p>
         </div>
         <div class="faq-list">
           <details>
@@ -725,7 +491,7 @@ def home_page():
           </details>
           <details>
             <summary>How do I get started?</summary>
-            <div><p>Give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a> or email <a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a>. We'll book a 15-minute setup call, write your greeting, set up forwarding for your missed and after-hours calls, and test it together.</p></div>
+            <div><p>Give me a call at <a href="tel:+12068553743">206-855-3743</a> or email <a href="mailto:jase@bluebeeops.com">jase@bluebeeops.com</a>. We'll book a 15-minute setup call, write your greeting, set up forwarding for your missed and after-hours calls, and test it together.</p></div>
           </details>
         </div>
       </div>
@@ -742,8 +508,8 @@ def home_page():
           </p>
         </div>
         <div class="contact-lines">
-          <a class="contact-line" href="{TEL}"><span class="ico">{ICON_PHONE}</span><span><small>Call Jase</small><b>+1 {PHONE_DISPLAY}</b></span></a>
-          <a class="contact-line" href="{MAILTO}"><span class="ico">{ICON_MAIL}</span><span><small>Email</small><b>{BIZ_EMAIL_ADDR}</b></span></a>
+          <a class="contact-line" href="tel:+12068553743"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></span><span><small>Call Jase</small><b>+1 206-855-3743</b></span></a>
+          <a class="contact-line" href="mailto:jase@bluebeeops.com"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg></span><span><small>Email</small><b>jase@bluebeeops.com</b></span></a>
         </div>
       </div>
     </section>
@@ -754,9 +520,9 @@ def home_page():
       <div class="footer-grid">
         <div>
           <div class="footer-brand">
-            {picture("logo", [192], "Blue Bee Ops logo", 96, 96)}
+            <picture><source type="image/webp" srcset="/img/logo-192.webp 192w" sizes="96px"><img src="/img/logo-192.jpg" srcset="/img/logo-192.jpg 192w" sizes="96px" width="96" height="96" alt="Blue Bee Ops logo"></picture>
             <div>
-              {WORDMARK}
+              <span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>
               <p>Missed-call and after-hours answering for trades shops in Kitsap County, Washington.</p>
             </div>
           </div>
@@ -764,8 +530,8 @@ def home_page():
         <div>
           <h2>Contact</h2>
           <ul>
-            <li><a href="{TEL}">+1 {PHONE_DISPLAY}</a></li>
-            <li><a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a></li>
+            <li><a href="tel:+12068553743">+1 206-855-3743</a></li>
+            <li><a href="mailto:jase@bluebeeops.com">jase@bluebeeops.com</a></li>
             <li>Kitsap County, WA</li>
           </ul>
         </div>
@@ -781,7 +547,7 @@ def home_page():
       <div class="footer-legal">
         <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington</p>
         <p>
-          When Jase can't pick up, calls to +1 {PHONE_DISPLAY} are answered by an AI call assistant that takes a message, and calls may be recorded.
+          When Jase can't pick up, calls to +1 206-855-3743 are answered by an AI call assistant that takes a message, and calls may be recorded.
           Callers can choose to get one text confirming their message reached Jase. See <a href="/sms-consent">SMS Consent</a>,
           the <a href="/privacy">Privacy Policy</a>, and the <a href="/terms">SMS Terms</a>.
         </p>
@@ -790,22 +556,3 @@ def home_page():
   </footer>
 </body>
 </html>
-"""
-
-pages = {
-    "classic/index.html": home_page(),
-    "sms-consent.html": page("SMS Consent | Jase Nations (Blue Bee Ops)",
-                             "How callers opt in to one confirmation text from Jase Nations (Blue Bee Ops), +1 206-855-3743.",
-                             consent("consent-heading") + RECORDING),
-    "privacy.html": page("Privacy Policy | Jase Nations (Blue Bee Ops)",
-                         "Privacy policy for Jase Nations (Blue Bee Ops) call assistant and texts.",
-                         privacy("privacy-heading")),
-    "terms.html": page("SMS Terms | Jase Nations (Blue Bee Ops)",
-                       "SMS terms for the Jase Nations call-message confirmations program.",
-                       terms("terms-heading")),
-}
-for name, html in pages.items():
-    os.makedirs(os.path.dirname(os.path.join(OUT, name)), exist_ok=True)
-    with open(os.path.join(OUT, name), "w") as f:
-        f.write(html)
-print("wrote", ", ".join(pages))
