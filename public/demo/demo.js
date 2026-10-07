@@ -71,10 +71,13 @@
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") + (STATUS[callState] || "");
     $("live-badge").hidden = callState !== "live";
     var card = m.card || {};
-    ["name", "callback", "issue", "urgency"].forEach(function (f) {
+    // "city" row shows City/ZIP together: card.city and card.zip (5 digits) from capture_update.
+    ["name", "callback", "issue", "city", "urgency"].forEach(function (f) {
       var el = document.querySelector('.field[data-field="' + f + '"]');
       var dd = el.querySelector("dd");
-      var v = card[f] ? String(card[f]) : "";
+      var v = f === "city"
+        ? [card.city, card.zip].filter(Boolean).map(String).join(" ")
+        : (card[f] ? String(card[f]) : "");
       var shown = v || "\u2014";
       if (dd.textContent !== shown) {
         dd.textContent = shown;
@@ -196,8 +199,10 @@
     $("get-number").addEventListener("click", requestLease);
     $("retry").addEventListener("click", function () { show("start"); resetTurnstile(); });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
+    // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {
-      if (s.mode === "off") return showClosed("off");
+      if (s.state === "closed" || s.mode === "off") return showClosed("off");
+      if (s.state === "busy") return showBusy(s.nextFreeInMin);
       $("mode-note").hidden = s.mode !== "scheduled-only";
       show("start");
       renderTurnstile();
