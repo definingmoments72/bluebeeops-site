@@ -2,8 +2,8 @@
 """Generates public/index.html (marketing home page) and sms-consent.html, privacy.html, terms.html
 (A2P policy pages built from shared sections).
 Static assets on Workers serve /privacy -> privacy.html (html_handling: auto-trailing-slash).
-Images in public/img and the favicons were cut once from assets/blue-bee-ops-logo.jpg; this script
-only writes HTML and needs nothing beyond the standard library.
+Images in public/img and the favicons come from assets/blue-bee-ops-logo.jpg via tools/build_images.py;
+this script only writes HTML and needs nothing beyond the standard library.
 Run: python3 tools/build_pages.py"""
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
