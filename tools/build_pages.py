@@ -524,6 +524,16 @@ def home_page():
   <script type="application/ld+json">
   {JSON_LD}
   </script>
+  <script>
+    const legacyPolicyRoutes = {{
+      "#sms-consent": "/sms-consent",
+      "#privacy": "/privacy",
+      "#sms-terms": "/terms",
+      "#recording": "/sms-consent#recording"
+    }};
+    const legacyPolicyRoute = legacyPolicyRoutes[window.location.hash];
+    if (legacyPolicyRoute) window.location.replace(legacyPolicyRoute);
+  </script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -650,7 +660,7 @@ def home_page():
       </div>
     </section>
 
-    <section class="about" aria-labelledby="about-heading">
+    <section id="about" class="about" aria-labelledby="about-heading">
       <div class="container">
         <div>
           <span class="eyebrow">Who you'll work with</span>
