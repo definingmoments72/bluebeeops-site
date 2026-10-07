@@ -86,11 +86,40 @@
       }
       if (f === "urgency") dd.className = v === "emergency" ? "urgency-emergency" : "";
     });
+    renderOwnerText(card);
     // Tell the Worker the confirmed callback is on screen (latency measurement, AC3).
     if (card.callback && card.callback !== ackedCallback && ws && ws.readyState === 1) {
       ackedCallback = card.callback;
       ws.send(JSON.stringify({ type: "ack", field: "callback", seq: m.seq }));
     }
+  }
+
+  // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
+  // Built from the same card fields as Live Capture. Values go in with textContent only.
+  function renderOwnerText(card) {
+    var cityZip = [card.city, card.zip].filter(Boolean).map(String).join(" ");
+    var urg = card.urgency ? String(card.urgency) : "";
+    var vals = {
+      name: card.name ? String(card.name) : "",
+      callback: card.callback ? String(card.callback) : "",
+      city: cityZip,
+      issue: card.issue ? String(card.issue) : "",
+      urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
+      tap: card.callback ? String(card.callback) : ""
+    };
+    var any = false;
+    Object.keys(vals).forEach(function (k) {
+      var el = document.querySelector('#sms-bubble [data-sms="' + k + '"]');
+      if (!el) return;
+      var v = vals[k], shown = v || "\u2014";
+      if (v) any = true;
+      if (el.textContent !== shown) {
+        el.textContent = shown;
+        el.classList.toggle("blank", !v);
+        el.classList.remove("fresh"); void el.offsetWidth; if (v) el.classList.add("fresh");
+      }
+    });
+    $("sms-bubble").classList.toggle("is-empty", !any);
   }
 
   // ---------- WebSocket ----------
