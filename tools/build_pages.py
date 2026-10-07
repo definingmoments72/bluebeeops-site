@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Generates public/index.html, sms-consent.html, privacy.html, terms.html from shared sections.
+"""Generates public/index.html (marketing home page) and sms-consent.html, privacy.html, terms.html
+(A2P policy pages built from shared sections).
 Static assets on Workers serve /privacy -> privacy.html (html_handling: auto-trailing-slash).
+Images in public/img and the favicons come from assets/blue-bee-ops-logo.jpg via tools/build_images.py;
+this script only writes HTML and needs nothing beyond the standard library.
 Run: python3 tools/build_pages.py"""
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
 UPDATED = "October 6, 2026"
 EMAIL = '<a href="mailto:definingmoments72@gmail.com">definingmoments72@gmail.com</a>'
-# Public business email. Shown on the home page header/footer only. The /sms-consent, /privacy and
-# /terms pages (and the matching policy sections) keep EMAIL until the A2P campaign review is finished.
-BIZ_EMAIL = '<a href="mailto:jase@bluebeeops.com">jase@bluebeeops.com</a>'
+# Public business email, used on the home page only. The /sms-consent, /privacy and /terms pages keep
+# EMAIL and must stay unchanged until the A2P campaign review is finished.
+BIZ_EMAIL_ADDR = "jase@bluebeeops.com"
+PHONE_DISPLAY = "206-855-3743"
+PHONE_TEL = "+12068553743"
 PROGRAM = "Jase Nations call-message confirmations"
 SCRIPT = ("Would you like one text confirming your message reached Jase Nations? It comes from this number, "
           "206-855-3743. It's optional. Msg and data rates may apply. Reply STOP to opt out or HELP for help. "
@@ -44,9 +49,7 @@ STYLE = """
     a { color:var(--accent); }
 """
 
-def page(title, desc, body, home=False):
-    email_line = f'\n      <p class="lede phone">Email: {BIZ_EMAIL}</p>' if home else ""
-    footer_email = BIZ_EMAIL if home else EMAIL
+def page(title, desc, body):
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,7 +64,7 @@ def page(title, desc, body, home=False):
     <div class="wrap">
       <h1>Jase Nations (Blue Bee Ops)</h1>
       <p class="lede">AI call assistant for <strong>Jase Nations</strong>, sole proprietor (doing business as Blue Bee Ops), Washington</p>
-      <p class="lede phone">Phone: <a href="tel:+12068553743">+1 206-855-3743</a></p>{email_line}
+      <p class="lede phone">Phone: <a href="tel:+12068553743">+1 206-855-3743</a></p>
       <nav aria-label="Pages">
         <a href="/">Home</a>
         <a href="/sms-consent">SMS Consent</a>
@@ -76,26 +79,12 @@ def page(title, desc, body, home=False):
   </main>
 
   <footer>
-    <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington · +1 206-855-3743 · {footer_email}</p>
+    <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington · +1 206-855-3743 · {EMAIL}</p>
     <p><a href="/sms-consent">SMS Consent</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">SMS Terms</a></p>
     <p>Last updated: {UPDATED}</p>
   </footer>
 </body>
 </html>
-"""
-
-ABOUT = f"""    <section id="about" aria-labelledby="about-heading">
-      <h2 id="about-heading">About</h2>
-      <p>
-        Jase Nations is a sole proprietor in Washington doing business as Blue Bee Ops.
-        An AI call assistant answers calls to <strong>+1 206-855-3743</strong> when Jase can't pick up and takes messages for him.
-        It is not used for marketing.
-      </p>
-      <p>
-        Texting program: <strong>{PROGRAM}</strong>. After taking a message, the assistant asks the caller whether
-        they'd like <strong>one text</strong> confirming their message reached Jase. A text is sent only if the caller says yes.
-      </p>
-    </section>
 """
 
 def consent(hid):
@@ -187,11 +176,622 @@ RECORDING = """    <section id="recording" aria-labelledby="recording-heading">
     </section>
 """
 
+# ---------------------------------------------------------------------------------------------
+# Home page (marketing). Copy follows the walk-in pitch: only the 78% / 42% (CallRail 2025) and
+# about $341 (Angi) stats, no guarantees, no emergency claims, Coverage Service does not book jobs.
+# ---------------------------------------------------------------------------------------------
+
+HOME_STYLE = """
+    :root {
+      --ink:#0f1b33; --muted:#4b5567; --paper:#f8f7f3; --surface:#fff; --line:#e3e0d6;
+      --lapis:#1d3f99; --lapis-hover:#16327c; --navy:#0a1a44; --navy-2:#06122f;
+      --gold:#d4ab55; --gold-ink:#87621a; --silver:#c9d0dc; --silver-ink:#5d6678;
+      --radius:14px; --shadow:0 1px 2px rgba(10,26,68,.06), 0 8px 24px rgba(10,26,68,.08);
+    }
+    *, *::before, *::after { box-sizing:border-box; }
+    html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } }
+    body { margin:0; font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size:1.0625rem; line-height:1.65; color:var(--ink); background:var(--paper); }
+    img, picture { max-width:100%; height:auto; display:block; }
+    a { color:var(--lapis); text-underline-offset:.18em; }
+    a:hover { color:var(--lapis-hover); }
+    :focus-visible { outline:3px solid var(--gold-ink); outline-offset:3px; border-radius:6px; }
+    .skip { position:absolute; left:1rem; top:-4rem; z-index:20; background:var(--navy); color:#fff; padding:.6rem 1rem; border-radius:8px; }
+    .skip:focus { top:1rem; color:#fff; }
+    .container { width:100%; max-width:72rem; margin:0 auto; padding:0 1.25rem; }
+    h1, h2, h3 { line-height:1.15; letter-spacing:-.02em; margin:0; }
+    h2 { font-size:clamp(1.65rem, 1.2rem + 2vw, 2.4rem); font-weight:750; }
+    h3 { font-size:1.2rem; font-weight:700; }
+    p { margin:0 0 1rem; }
+    .eyebrow { display:inline-block; font-size:.8rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-ink); margin-bottom:.85rem; }
+    .lead { font-size:1.15rem; color:var(--muted); max-width:40rem; }
+    section { padding:4rem 0; }
+    .section-head { max-width:44rem; margin-bottom:2.25rem; }
+    .section-head p, .about .lead, .contact h2 + p { margin-top:1rem; }
+    .section-head p { color:var(--muted); }
+
+    /* Header */
+    .site-header { position:sticky; top:0; z-index:10; background:rgba(255,255,255,.94); border-bottom:1px solid var(--line);
+      -webkit-backdrop-filter:saturate(1.4) blur(8px); backdrop-filter:saturate(1.4) blur(8px); }
+    .site-header .container { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:4.25rem; }
+    .brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; color:var(--ink); }
+    .brand img { width:44px; height:44px; border-radius:50%; box-shadow:0 0 0 1px rgba(212,171,85,.55), 0 2px 6px rgba(10,26,68,.25); }
+    .wordmark { font-weight:800; letter-spacing:.14em; font-size:1rem; text-transform:uppercase; white-space:nowrap; }
+    .wordmark .bb { color:var(--silver-ink); }
+    .wordmark .ops { color:var(--gold-ink); }
+    .site-nav { display:none; gap:1.6rem; }
+    .site-nav a { color:var(--ink); text-decoration:none; font-weight:600; font-size:.95rem; }
+    .site-nav a:hover { color:var(--lapis); text-decoration:underline; }
+    .header-call { display:inline-flex; align-items:center; gap:.45rem; }
+    .header-call .num { display:none; }
+
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:.55rem; min-height:3rem; padding:.75rem 1.3rem;
+      border-radius:999px; font-weight:700; font-size:1rem; line-height:1.2; text-decoration:none; border:2px solid transparent;
+      transition:background-color .15s, color .15s, border-color .15s; }
+    .btn svg { width:1.15em; height:1.15em; flex:none; }
+    .btn-primary { background:var(--lapis); color:#fff; }
+    .btn-primary:hover { background:var(--lapis-hover); color:#fff; }
+    .btn-secondary { background:var(--surface); color:var(--navy); border-color:#cfd5e3; }
+    .btn-secondary:hover { border-color:var(--lapis); color:var(--lapis); }
+    .btn-gold { background:var(--gold); color:var(--navy-2); }
+    .btn-gold:hover { background:#e2bd6c; color:var(--navy-2); }
+    .btn-ghost-light { color:#fff; border-color:rgba(255,255,255,.45); }
+    .btn-ghost-light:hover { color:#fff; border-color:#fff; }
+    .btn-sm { min-height:2.5rem; padding:.5rem 1rem; font-size:.95rem; }
+
+    /* Hero */
+    .hero { position:relative; overflow:hidden; padding:3rem 0 3.5rem;
+      background:radial-gradient(60rem 30rem at 85% -10%, rgba(29,63,153,.10), transparent 60%),
+                 radial-gradient(40rem 22rem at -10% 110%, rgba(212,171,85,.12), transparent 60%), var(--paper); }
+    .hero .container { display:grid; gap:2.75rem; align-items:center; }
+    .hero h1 { font-size:clamp(2.2rem, 1.4rem + 4vw, 3.6rem); font-weight:800; letter-spacing:-.03em; margin-bottom:1.1rem; }
+    .hero h1 .accent { color:var(--lapis); }
+    .hero .lead { margin-bottom:1.75rem; }
+    .cta-row { display:flex; flex-wrap:wrap; gap:.75rem; }
+    .hero-note { margin-top:1.5rem; font-size:.98rem; color:var(--muted); display:flex; gap:.6rem; align-items:flex-start; }
+    .hero-note strong { color:var(--ink); }
+    .hero-note .dot { flex:none; width:.55rem; height:.55rem; margin-top:.55rem; border-radius:50%; background:var(--gold); box-shadow:0 0 0 3px rgba(212,171,85,.25); }
+    .hero-visual { position:relative; justify-self:center; width:min(100%, 26rem); padding-bottom:12rem; }
+    .medallion { width:72%; margin:0 auto; border-radius:50%; overflow:hidden;
+      box-shadow:0 0 0 1px rgba(212,171,85,.6), 0 0 0 10px rgba(255,255,255,.9), 0 0 0 11px rgba(212,171,85,.35), 0 30px 60px rgba(10,26,68,.28); }
+    .text-card { position:absolute; left:0; right:0; bottom:0; margin:0 auto; width:min(100%, 21rem); background:var(--surface);
+      border:1px solid var(--line); border-radius:18px; padding:1rem 1.1rem 1.05rem; box-shadow:var(--shadow); font-size:.95rem; line-height:1.5; }
+    .text-card .from { display:flex; align-items:center; justify-content:space-between; font-size:.78rem; color:var(--muted); margin-bottom:.5rem; }
+    .text-card .from b { color:var(--ink); font-weight:700; letter-spacing:.02em; }
+    .text-card .bubble { background:#eef2fb; border-radius:14px 14px 14px 4px; padding:.7rem .85rem; }
+    .text-card .bubble p { margin:0 0 .2rem; }
+    .text-card .bubble p:last-child { margin:0; }
+    .text-card .caption { margin:.55rem 0 0; font-size:.78rem; color:var(--muted); }
+
+    /* Stats */
+    .why { background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .stats { display:grid; gap:1rem; }
+    .stat { background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:1.5rem 1.4rem; }
+    .stat .num { display:block; font-size:clamp(2.5rem, 2rem + 2vw, 3.25rem); font-weight:800; letter-spacing:-.03em; line-height:1; color:var(--lapis); margin-bottom:.8rem; }
+    .stat .num::after { content:""; display:block; width:2.5rem; height:3px; margin-top:.8rem; border-radius:3px; background:var(--gold); }
+    .stat .num small { display:block; font-size:.9rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:.35rem; }
+    .stat p { margin:0; }
+    .sources { margin-top:1.25rem; font-size:.85rem; color:var(--muted); }
+
+    /* Steps */
+    .steps { list-style:none; margin:0; padding:0; display:grid; gap:1rem; counter-reset:step; }
+    .step { position:relative; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:1.5rem 1.4rem 1.4rem; box-shadow:var(--shadow); }
+    .step::before { counter-increment:step; content:counter(step); display:grid; place-items:center; width:2.4rem; height:2.4rem; border-radius:50%;
+      background:var(--navy); color:var(--gold); font-weight:800; margin-bottom:1rem; box-shadow:0 0 0 3px rgba(212,171,85,.35); }
+    .step h3 { margin-bottom:.5rem; }
+    .step p { margin:0; color:var(--muted); }
+    .reports { margin-top:1.5rem; display:flex; gap:1rem; align-items:flex-start; padding:1.25rem 1.4rem; border-radius:var(--radius);
+      background:linear-gradient(0deg, rgba(212,171,85,.10), rgba(212,171,85,.10)), var(--surface); border:1px solid rgba(212,171,85,.45); }
+    .reports svg { flex:none; width:1.6rem; height:1.6rem; color:var(--gold-ink); margin-top:.15rem; }
+    .reports p { margin:0; }
+
+    /* Packages */
+    .services { background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .plans { display:grid; gap:1.25rem; align-items:stretch; }
+    .plan { display:flex; flex-direction:column; background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:1.75rem 1.5rem 1.5rem; }
+    .plan .tag { align-self:flex-start; font-size:.75rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:.3rem .65rem; border-radius:999px;
+      background:rgba(29,63,153,.08); color:var(--lapis); margin-bottom:1rem; }
+    .plan h3 { font-size:1.35rem; }
+    .plan .summary { color:var(--muted); margin:.6rem 0 1.2rem; }
+    .price { display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; margin-bottom:.25rem; }
+    .price .amt { font-size:2.6rem; font-weight:800; letter-spacing:-.03em; line-height:1; }
+    .price .per { color:var(--muted); font-weight:600; }
+    .setup { font-size:.95rem; font-weight:600; color:var(--gold-ink); margin-bottom:1.25rem; }
+    .plan .includes { font-size:.9rem; font-weight:700; margin:0 0 .5rem; }
+    .plan ul { list-style:none; padding:0; margin:0 0 1.5rem; display:grid; gap:.6rem; }
+    .plan li { position:relative; padding-left:1.75rem; }
+    .plan li::before { content:""; position:absolute; left:0; top:.42em; width:1.05rem; height:1.05rem; border-radius:50%;
+      background:var(--lapis) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E") center/80% no-repeat; }
+    .plan .fine { font-size:.85rem; color:var(--muted); margin:-.75rem 0 1.5rem; }
+    .plan .btn { margin-top:auto; width:100%; }
+    .plan.featured { background:linear-gradient(160deg, var(--navy) 0%, #10245e 100%); color:#fff; border-color:var(--navy);
+      box-shadow:0 0 0 1px rgba(212,171,85,.5), 0 24px 48px rgba(10,26,68,.28); }
+    .plan.featured .tag { background:rgba(212,171,85,.18); color:var(--gold); }
+    .plan.featured .summary, .plan.featured .price .per { color:var(--silver); }
+    .plan.featured .setup { color:var(--gold); }
+    .plan.featured .fine { color:var(--silver); }
+    .plan.featured li::before { background-color:var(--gold); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2306122f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E"); }
+    .plan.featured :focus-visible { outline-color:var(--gold); }
+    .plans-note { margin:1.75rem 0 0; color:var(--muted); max-width:44rem; }
+
+    /* About */
+    .about .container { display:grid; gap:2rem; align-items:center; }
+    .about-card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:1.75rem 1.5rem; box-shadow:var(--shadow); }
+    .about-card h3 { margin-bottom:1rem; }
+    .about-card ul { margin:0; padding:0; list-style:none; display:grid; gap:.85rem; }
+    .about-card li { display:flex; gap:.75rem; }
+    .about-card li span { flex:none; display:grid; place-items:center; width:1.8rem; height:1.8rem; border-radius:50%; background:rgba(29,63,153,.08); color:var(--lapis); font-weight:800; font-size:.9rem; }
+    .trades { display:flex; flex-wrap:wrap; gap:.5rem; margin:1.5rem 0 0; padding:0; list-style:none; }
+    .trades li { font-size:.9rem; font-weight:600; padding:.35rem .8rem; border-radius:999px; background:var(--surface); border:1px solid var(--line); color:var(--navy); }
+
+    /* FAQ */
+    .faq { background:var(--surface); border-top:1px solid var(--line); }
+    .faq .container { display:grid; gap:0; align-items:start; }
+    .faq-list { display:grid; gap:.75rem; }
+    .faq details { background:var(--paper); border:1px solid var(--line); border-radius:12px; }
+    .faq summary { cursor:pointer; list-style:none; padding:1.1rem 3rem 1.1rem 1.25rem; font-weight:700; position:relative; border-radius:12px; }
+    .faq summary::-webkit-details-marker { display:none; }
+    .faq summary::after { content:""; position:absolute; right:1.25rem; top:50%; width:.6rem; height:.6rem; margin-top:-.4rem;
+      border-right:2px solid var(--lapis); border-bottom:2px solid var(--lapis); transform:rotate(45deg); transition:transform .15s; }
+    .faq details[open] summary::after { transform:rotate(-135deg); margin-top:-.1rem; }
+    .faq details > div { padding:0 1.25rem 1.1rem; color:var(--muted); }
+    .faq details > div p:last-child { margin:0; }
+
+    /* Contact */
+    .contact { background:radial-gradient(50rem 24rem at 100% 0%, rgba(29,63,153,.55), transparent 60%), linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 100%); color:#fff; }
+    .contact .container { display:grid; gap:2rem; align-items:center; }
+    .contact .eyebrow { color:var(--gold); }
+    .contact p { color:var(--silver); max-width:38rem; }
+    .contact-lines { display:grid; gap:.9rem; }
+    .contact-line { display:flex; align-items:center; gap:1rem; padding:1rem 1.2rem; border-radius:var(--radius); text-decoration:none; color:#fff;
+      background:rgba(255,255,255,.06); border:1px solid rgba(201,208,220,.25); transition:border-color .15s, background-color .15s; }
+    .contact-line:hover { color:#fff; border-color:var(--gold); background:rgba(255,255,255,.1); }
+    .contact-line:focus-visible { outline-color:var(--gold); }
+    .contact-line .ico { flex:none; display:grid; place-items:center; width:2.75rem; height:2.75rem; border-radius:50%; background:var(--gold); color:var(--navy-2); }
+    .contact-line .ico svg { width:1.3rem; height:1.3rem; }
+    .contact-line small { display:block; font-size:.8rem; color:var(--silver); letter-spacing:.04em; }
+    .contact-line b { font-size:1.15rem; overflow-wrap:anywhere; }
+
+    /* Footer */
+    .site-footer { background:var(--navy-2); color:var(--silver); font-size:.92rem; padding:3rem 0 2rem; }
+    .site-footer a { color:#fff; }
+    .site-footer a:hover { color:var(--gold); }
+    .site-footer :focus-visible { outline-color:var(--gold); }
+    .footer-grid { display:grid; gap:2rem; }
+    .footer-brand { display:flex; align-items:center; gap:1rem; }
+    .footer-brand img { width:96px; height:96px; border-radius:12px; }
+    .footer-brand .wordmark .bb { color:var(--silver); }
+    .footer-brand .wordmark .ops { color:var(--gold); }
+    .footer-brand p { margin:.35rem 0 0; }
+    .site-footer h2 { font-size:.8rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); margin-bottom:.75rem; font-weight:700; }
+    .site-footer ul { list-style:none; margin:0; padding:0; display:grid; gap:.45rem; }
+    .footer-legal { margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid rgba(201,208,220,.18); font-size:.85rem; }
+    .footer-legal p { margin:0 0 .5rem; }
+
+    @media (min-width: 40rem) {
+      .stats { grid-template-columns:repeat(3, 1fr); }
+      .footer-grid { grid-template-columns:2fr 1fr 1fr; }
+      .header-call .num { display:inline; }
+    }
+    @media (min-width: 56rem) {
+      section { padding:5.5rem 0; }
+      .site-nav { display:flex; }
+      .hero { padding:5rem 0 5.5rem; }
+      .hero .container { grid-template-columns:1.1fr .9fr; gap:3.5rem; }
+      .hero-visual { width:100%; max-width:28rem; padding-bottom:8.5rem; }
+      .medallion { width:82%; margin:0; }
+      .text-card { left:auto; right:-.5rem; bottom:0; width:18.5rem; }
+      .steps { grid-template-columns:repeat(3, 1fr); }
+      .plans { grid-template-columns:1.08fr 1fr 1fr; }
+      .plan.featured { transform:translateY(-.5rem); }
+      .about .container { grid-template-columns:1.15fr .85fr; gap:3.5rem; }
+      .contact .container { grid-template-columns:1.1fr .9fr; gap:3.5rem; }
+      .faq .container { grid-template-columns:.8fr 1.2fr; gap:3.5rem; }
+      .faq .section-head { position:sticky; top:6rem; }
+    }
+"""
+
+ICON_PHONE = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>')
+ICON_MAIL = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+             '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>')
+ICON_REPORT = ('<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+               '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>')
+
+TEL = f'tel:{PHONE_TEL}'
+MAILTO = f'mailto:{BIZ_EMAIL_ADDR}'
+
+PACKAGES = [
+    {
+        "name": "Coverage Service", "tag": "Where most shops start", "featured": True,
+        "price": "$149", "setup": "$0 setup",
+        "summary": "Answers the calls you miss, in your shop's name, and texts you the details right away.",
+        "includes": None,
+        "items": [
+            "Answers your missed and after-hours calls in your shop's name",
+            "Gets the caller's name, number, and what they need",
+            "Texts it to you right away, so you can call back as soon as you're free",
+            "Screens out junk calls",
+            "A daily report for the first two weeks, then a weekly report of everything Blue Bee caught",
+            "Set up with you on a 15-minute call",
+        ],
+        "fine": "Coverage Service takes the details. It doesn't book jobs; you make the callback yourself.",
+        "cta": ("Call Jase about Coverage", TEL, "btn-gold"),
+    },
+    {
+        "name": "Intake Service", "tag": "A step up", "featured": False,
+        "price": "$249", "setup": None,
+        "summary": "For shops that want more of the conversation handled before they call back.",
+        "includes": "Everything in Coverage Service, plus:",
+        "items": [
+            "Helps with daytime overflow, not just missed and after-hours calls",
+            "Goes deeper on intake questions for your kind of work",
+            "Answers more of your common questions",
+            "Lets the caller pick an estimate window, which you confirm with one tap",
+        ],
+        "fine": None,
+        "cta": ("Ask about Intake", f"{MAILTO}?subject=Intake%20Service", "btn-secondary"),
+    },
+    {
+        "name": "Estimate Request Service", "tag": "Top tier", "featured": False,
+        "price": "$349", "setup": "plus $300 to $500 setup",
+        "summary": "For shops that want estimates on the calendar before the caller hangs up.",
+        "includes": "Everything in Intake Service, plus:",
+        "items": [
+            "Books estimates live on the call",
+            "Puts urgent calls straight through to you",
+        ],
+        "fine": "Putting urgent calls through isn't an emergency or dispatch service.",
+        "cta": ("Ask about Estimate Request", f"{MAILTO}?subject=Estimate%20Request%20Service", "btn-secondary"),
+    },
+]
+
+def plan_card(p):
+    cls = "plan featured" if p["featured"] else "plan"
+    hid = "plan-" + p["name"].split()[0].lower()
+    setup = f'\n          <p class="setup">{p["setup"]}</p>' if p["setup"] else '\n          <p class="setup">&nbsp;</p>'
+    includes = f'\n          <p class="includes">{p["includes"]}</p>' if p["includes"] else ""
+    items = "\n".join(f"            <li>{i}</li>" for i in p["items"])
+    fine = f'\n          <p class="fine">{p["fine"]}</p>' if p["fine"] else ""
+    label, href, btn = p["cta"]
+    return f"""        <article class="{cls}" aria-labelledby="{hid}">
+          <span class="tag">{p["tag"]}</span>
+          <h3 id="{hid}">{p["name"]}</h3>
+          <p class="summary">{p["summary"]}</p>
+          <p class="price"><span class="amt">{p["price"]}</span><span class="per">a month</span></p>{setup}{includes}
+          <ul>
+{items}
+          </ul>{fine}
+          <a class="btn {btn}" href="{href}">{label}</a>
+        </article>"""
+
+def picture(stem, sizes, alt, w, h, cls="", lazy=False, slot=None):
+    loading = ' loading="lazy" decoding="async"' if lazy else ""
+    slot = slot or f"{w}px"
+    cls_attr = f' class="{cls}"' if cls else ""
+    webp = ", ".join(f"/img/{stem}-{s}.webp {s}w" for s in sizes)
+    jpg = ", ".join(f"/img/{stem}-{s}.jpg {s}w" for s in sizes)
+    return (f'<picture{cls_attr}><source type="image/webp" srcset="{webp}" sizes="{slot}">'
+            f'<img src="/img/{stem}-{sizes[-1]}.jpg" srcset="{jpg}" sizes="{slot}" width="{w}" height="{h}" alt="{alt}"{loading}></picture>')
+
+WORDMARK = '<span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>'
+
+HOME_TITLE = "Blue Bee Ops | Missed-call and after-hours answering for Kitsap County trades shops"
+HOME_DESC = ("Blue Bee Ops answers the calls you miss on the job, in your shop's name, and texts you the caller's name, "
+             "number, and what they need. Coverage Service is $149 a month with no setup fee. Call Jase at 206-855-3743.")
+
+JSON_LD = f"""{{
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "Blue Bee Ops",
+    "url": "https://bluebeeops.com/",
+    "logo": "https://bluebeeops.com/img/logo-640.jpg",
+    "image": "https://bluebeeops.com/img/og.jpg",
+    "description": "Missed-call and after-hours answering for trades shops in Kitsap County, Washington.",
+    "telephone": "+1-206-855-3743",
+    "email": "{BIZ_EMAIL_ADDR}",
+    "founder": {{ "@type": "Person", "name": "Jase Nations" }},
+    "areaServed": {{ "@type": "AdministrativeArea", "name": "Kitsap County, WA" }}
+  }}"""
+
+def home_page():
+    plans = "\n".join(plan_card(p) for p in PACKAGES)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{HOME_TITLE}</title>
+  <meta name="description" content="{HOME_DESC}">
+  <link rel="canonical" href="https://bluebeeops.com/">
+  <meta name="theme-color" content="#0a1a44">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Blue Bee Ops">
+  <meta property="og:title" content="Blue Bee Ops: catch the calls you miss on the job">
+  <meta property="og:description" content="{HOME_DESC}">
+  <meta property="og:url" content="https://bluebeeops.com/">
+  <meta property="og:image" content="https://bluebeeops.com/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" as="image" type="image/webp" href="/img/emblem-128.webp">
+  <style>{HOME_STYLE}  </style>
+  <script type="application/ld+json">
+  {JSON_LD}
+  </script>
+  <script>
+    const legacyPolicyRoutes = {{
+      "#sms-consent": "/sms-consent",
+      "#privacy": "/privacy",
+      "#sms-terms": "/terms",
+      "#recording": "/sms-consent#recording"
+    }};
+    const legacyPolicyRoute = legacyPolicyRoutes[window.location.hash];
+    if (legacyPolicyRoute) window.location.replace(legacyPolicyRoute);
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/" aria-label="Blue Bee Ops home">
+        {picture("emblem", [128], "", 44, 44)}
+        {WORDMARK}
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#how-it-works">How it works</a>
+        <a href="#services">Services</a>
+        <a href="#faq">Questions</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <a class="btn btn-primary btn-sm header-call" href="{TEL}">{ICON_PHONE}<span>Call<span class="num"> {PHONE_DISPLAY}</span></span></a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="container">
+        <div>
+          <span class="eyebrow">For trades shops in Kitsap County, WA</span>
+          <h1 id="hero-heading">Catch the calls you miss <span class="accent">while you're on the job.</span></h1>
+          <p class="lead">
+            When you're up a ladder, under a house, or it's after hours, Blue Bee Ops picks up in your shop's name.
+            It gets the caller's name, number, and what they need, then texts it to you right away, so you can call
+            them back as soon as you're free.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="{TEL}">{ICON_PHONE}Call Jase: {PHONE_DISPLAY}</a>
+            <a class="btn btn-secondary" href="{MAILTO}">{ICON_MAIL}{BIZ_EMAIL_ADDR}</a>
+          </div>
+          <p class="hero-note"><span class="dot" aria-hidden="true"></span>
+            <span><strong>Coverage Service is $149 a month, with no setup fee.</strong> I set it up with you myself on a 15-minute call.</span>
+          </p>
+        </div>
+        <div class="hero-visual">
+          {picture("emblem", [128, 512], "Blue Bee Ops logo: a lapis-blue bee with gold wings inside a thin gold circle", 512, 512, "medallion", slot="(min-width: 56rem) 370px, 72vw")}
+          <figure class="text-card">
+            <div class="from"><b>Blue Bee Ops</b><span>5:47 PM</span></div>
+            <div class="bubble">
+              <p><strong>Missed call caught</strong></p>
+              <p>Name: Dana R.</p>
+              <p>Number: (360) 555-0148</p>
+              <p>Needs: water heater leaking in the garage, asked for a callback this evening.</p>
+            </div>
+            <figcaption class="caption">An example of the text you'd get after a caught call.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="why" aria-labelledby="why-heading">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Why it matters</span>
+          <h2 id="why-heading">You can't answer the phone from the top of a ladder.</h2>
+          <p>
+            When you're running a job, driving between sites, or finally sitting down to dinner, the phone keeps ringing.
+            Some of those calls are exactly the work you want. Voicemail catches a few of them, but people are less patient
+            with an unanswered phone than most of us would like to think.
+          </p>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <span class="num"><small>2025 survey</small>78%</span>
+            <p>of people said they've given up on a business after a call went unanswered.</p>
+          </div>
+          <div class="stat">
+            <span class="num"><small>Only</small>42%</span>
+            <p>said they leave a voicemail when a business doesn't answer.</p>
+          </div>
+          <div class="stat">
+            <span class="num"><small>About</small>$341</span>
+            <p>for a typical service call, and a bit more for HVAC and electrical. Coverage Service at $149 a month is less than half of one.</p>
+          </div>
+        </div>
+        <p class="sources">Sources: CallRail survey of 1,000 U.S. consumers, 2025 (78% and 42%). Angi national cost guides (service call value, national average, not profit).</p>
+      </div>
+    </section>
+
+    <section id="how-it-works" aria-labelledby="how-heading">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">How Coverage Service works</span>
+          <h2 id="how-heading">It answers when you can't, and you make the callback.</h2>
+          <p>Nothing changes about how you run your shop. You just stop losing track of the calls that come in while your hands are full.</p>
+        </div>
+        <ol class="steps">
+          <li class="step">
+            <h3>Your missed calls get answered</h3>
+            <p>On your setup call, we set up forwarding for the calls you miss and the ones that come in after hours, and we test it together before it goes live.</p>
+          </li>
+          <li class="step">
+            <h3>It picks up in your shop's name</h3>
+            <p>We write your greeting together. It keeps the call short and takes down the caller's name, number, and what they need. It's an automated answerer, and it doesn't pretend to be a person.</p>
+          </li>
+          <li class="step">
+            <h3>You get a text right away</h3>
+            <p>The details land on your phone while the call is still fresh, so you can call them back as soon as you're free, the same way you always have.</p>
+          </li>
+        </ol>
+        <div class="reports">
+          {ICON_REPORT}
+          <p><strong>You'll see everything it caught.</strong> For the first two weeks you get a daily report, and after that a weekly report of everything Blue Bee caught, so you can count for yourself whether it's worth it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="services" class="services" aria-labelledby="services-heading">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Services and pricing</span>
+          <h2 id="services-heading">Start with Coverage. Step up when you're ready.</h2>
+          <p>Coverage Service is where most shops start. If you want more of the call handled before you pick up the phone, there are two steps up from there.</p>
+        </div>
+        <div class="plans">
+{plans}
+        </div>
+        <p class="plans-note">You can start with Coverage Service and decide later, once the reports show you what it's catching. Questions about which one fits your shop? Give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a>.</p>
+      </div>
+    </section>
+
+    <section id="about" class="about" aria-labelledby="about-heading">
+      <div class="container">
+        <div>
+          <span class="eyebrow">Who you'll work with</span>
+          <h2 id="about-heading">Hi, I'm Jase.</h2>
+          <p class="lead">
+            I've got a background in the construction trades, and these days I help local shops catch the calls they miss
+            while they're out on a job.
+          </p>
+          <p>
+            Blue Bee Ops is built for the shops that keep Kitsap County running, and I set up every shop myself.
+            You won't be handed off to a call center or a ticket queue. If you'd rather talk it over in person,
+            I'm glad to stop by the shop.
+          </p>
+          <ul class="trades" aria-label="Built for">
+            <li>Plumbers</li><li>HVAC</li><li>Electricians</li><li>Roofers</li><li>Contractors</li>
+          </ul>
+        </div>
+        <div class="about-card">
+          <h3>Your 15-minute setup call</h3>
+          <ul>
+            <li><span aria-hidden="true">1</span><div>We write your greeting, with your shop's name the way it should sound on the phone.</div></li>
+            <li><span aria-hidden="true">2</span><div>We set up forwarding for your missed and after-hours calls.</div></li>
+            <li><span aria-hidden="true">3</span><div>We test it together before it ever goes live.</div></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="faq" aria-labelledby="faq-heading">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Common questions</span>
+          <h2 id="faq-heading">Fair questions, straight answers.</h2>
+          <p>These are the questions shop owners usually ask first. If yours isn't here, give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a> and I'll answer it.</p>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>I already have voicemail. Why would I need this?</summary>
+            <div><p>Voicemail's fine for the people who use it. The trouble is, in a 2025 CallRail survey, only 42% said they leave a voicemail when a business doesn't answer. Coverage Service catches the name, the number, and what they need while the caller's still on the line, and texts it straight to you. And you'll see every call it caught in your report.</p></div>
+          </details>
+          <details>
+            <summary>Is it a real person?</summary>
+            <div><p>No. It's an automated answerer that I set up for your shop. It takes the details, and you make the callback yourself.</p></div>
+          </details>
+          <details>
+            <summary>My customers don't like talking to robots.</summary>
+            <div><p>That's fair. A lot of people don't love it, and it isn't going to pretend to be a person. That's why it answers in your shop's name, keeps it short, and just takes the details. We write the greeting together on your setup call and test it before it ever goes live.</p></div>
+          </details>
+          <details>
+            <summary>Is $149 a month worth it?</summary>
+            <div><p>Think about what a normal service call is worth to you. Angi's national cost guides put a typical service call at about $341, and a bit more for HVAC and electrical, so $149 a month is less than half of one. There's no setup fee, and the reports show you every call it caught, so you can count for yourself.</p></div>
+          </details>
+          <details>
+            <summary>Does Coverage Service book jobs or appointments?</summary>
+            <div><p>No. Coverage Service takes the details and texts you, and you call the customer back. Booking starts with Intake Service, where the caller picks an estimate window that you confirm with one tap. Estimate Request Service books estimates live on the call.</p></div>
+          </details>
+          <details>
+            <summary>Is this an emergency line?</summary>
+            <div><p>No. None of the services are an emergency line, a dispatcher, or 24-hour emergency coverage. Estimate Request Service can put urgent calls straight through to you, but it's still you who takes the call.</p></div>
+          </details>
+          <details>
+            <summary>How do I get started?</summary>
+            <div><p>Give me a call at <a href="{TEL}">{PHONE_DISPLAY}</a> or email <a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a>. We'll book a 15-minute setup call, write your greeting, set up forwarding for your missed and after-hours calls, and test it together.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="contact" aria-labelledby="contact-heading">
+      <div class="container">
+        <div>
+          <span class="eyebrow">Talk to Jase</span>
+          <h2 id="contact-heading">Let's catch the calls you've been missing.</h2>
+          <p>
+            Give me a call or send an email, and tell me a little about your shop and how you handle the phone now
+            when you're out on a job. Questions, or want to hear it answer? Just ask.
+          </p>
+        </div>
+        <div class="contact-lines">
+          <a class="contact-line" href="{TEL}"><span class="ico">{ICON_PHONE}</span><span><small>Call Jase</small><b>+1 {PHONE_DISPLAY}</b></span></a>
+          <a class="contact-line" href="{MAILTO}"><span class="ico">{ICON_MAIL}</span><span><small>Email</small><b>{BIZ_EMAIL_ADDR}</b></span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">
+            {picture("logo", [192], "Blue Bee Ops logo", 96, 96)}
+            <div>
+              {WORDMARK}
+              <p>Missed-call and after-hours answering for trades shops in Kitsap County, Washington.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <ul>
+            <li><a href="{TEL}">+1 {PHONE_DISPLAY}</a></li>
+            <li><a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a></li>
+            <li>Kitsap County, WA</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Texting &amp; policies</h2>
+          <ul>
+            <li><a href="/sms-consent">SMS Consent</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">SMS Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington</p>
+        <p>
+          When Jase can't pick up, calls to +1 {PHONE_DISPLAY} are answered by an AI call assistant that takes a message, and calls may be recorded.
+          Callers can choose to get one text confirming their message reached Jase. See <a href="/sms-consent">SMS Consent</a>,
+          the <a href="/privacy">Privacy Policy</a>, and the <a href="/terms">SMS Terms</a>.
+        </p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
+"""
+
 pages = {
-    "index.html": page("Jase Nations (Blue Bee Ops): SMS Consent, Privacy &amp; Terms",
-                       "Jase Nations (Blue Bee Ops) AI call assistant (+1 206-855-3743): SMS consent script, privacy policy, and SMS terms.",
-                       ABOUT + consent("consent-heading") + privacy("privacy-heading") + terms("terms-heading") + RECORDING,
-                       home=True),
+    "index.html": home_page(),
     "sms-consent.html": page("SMS Consent | Jase Nations (Blue Bee Ops)",
                              "How callers opt in to one confirmation text from Jase Nations (Blue Bee Ops), +1 206-855-3743.",
                              consent("consent-heading") + RECORDING),
