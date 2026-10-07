@@ -9,7 +9,7 @@
   var HEARTBEAT_MS = 20000;
 
   var lease = null; // { sessionId, sessionToken, number }
-  var hbTimer = null, pingTimer = null, ws = null, wsRetry = 0, wsClosedForGood = false;
+  var hbTimer = null, pingTimer = null, wsTimer = null, ws = null, wsRetry = 0, wsClosedForGood = false;
   var callState = "idle", lastSeq = -1, ackedCallback = null, lastCallClick = 0;
   var turnstileToken = null, widgetId = null;
 
@@ -99,12 +99,15 @@
     try {
       ws = new WebSocket(WS_API + "/ws?s=" + encodeURIComponent(lease.sessionId), ["bbdemo.v1", lease.sessionToken]);
     } catch (e) { scheduleWs(); return; }
+    var mine = ws;
     ws.onopen = function () { wsRetry = 0; };
     ws.onmessage = function (ev) {
+      if (ws !== mine) return; // late message from an earlier lease's socket
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.type === "hello" || m.type === "state") render(m);
     };
     ws.onclose = function (ev) {
+      if (ws !== mine) return; // a socket from an earlier lease: ignore
       ws = null;
       if (ev.code === 4000) { wsClosedForGood = true; return; } // session wiped after 24 h
       scheduleWs();
@@ -112,7 +115,8 @@
   }
   function scheduleWs() {
     wsRetry = Math.min(wsRetry + 1, 6);
-    setTimeout(connectWs, Math.min(30000, 500 * Math.pow(2, wsRetry)));
+    clearTimeout(wsTimer);
+    wsTimer = setTimeout(connectWs, Math.min(30000, 500 * Math.pow(2, wsRetry)));
   }
 
   // ---------- lease lifecycle ----------
@@ -123,9 +127,19 @@
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
       if (r.reason === "unknown-session") { stopLease(); show("start"); resetTurnstile(); }
+      if (r.reason === "ip-cap") {
+        // another screen on this network holds the lines this network may use (review MF-1)
+        stopLease(); show("start"); resetTurnstile();
+        $("start-err").textContent = "Too many demo screens are open from this network. Close one and try again.";
+        $("start-err").hidden = false;
+      }
     }).catch(function () { /* transient; next beat retries */ });
   }
   function startLease(r) {
+    // Review SF-5: a new lease starts with fresh WebSocket + card state (stopLease marked the old socket
+    // closed-for-good, and the new session's seq numbers start again at 0).
+    clearTimeout(wsTimer); wsTimer = null;
+    wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
     showNumber(r.number);
     clearInterval(hbTimer);
@@ -135,9 +149,9 @@
     connectWs();
   }
   function stopLease() {
-    clearInterval(hbTimer); clearInterval(pingTimer);
+    clearInterval(hbTimer); clearInterval(pingTimer); clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = true;
-    if (ws) try { ws.close(); } catch (e) {}
+    if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
   }
   function showBusy(min) {
