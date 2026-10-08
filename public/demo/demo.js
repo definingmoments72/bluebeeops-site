@@ -238,10 +238,9 @@
   }
 
   // How sure Ara is of the caller's name (card.nameConfidence + card.nameNote), e.g. "Low confidence \u00b7 heard unclearly twice; best guess".
-  // Only medium/low are worth the owner's attention; high, unknown or missing values (older Workers) give "".
-  var NAME_CONF = { medium: "Medium confidence", low: "Low confidence" };
+  // High, medium and low are shown; unknown or missing values (including older Workers) give "".
+  var NAME_CONF = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" };
   function nameCheck(card) {
-    if (!card.name) return "";
     var label = NAME_CONF[String(card.nameConfidence || "").trim().toLowerCase()];
     if (!label) return "";
     var note = card.nameNote ? String(card.nameNote).replace(/\s+/g, " ").trim() : "";
