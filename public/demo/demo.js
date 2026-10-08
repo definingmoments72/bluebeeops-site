@@ -162,7 +162,7 @@
     var card = m.card || {};
     var pkg = cardPkg(m);
     // A real call state (or a fresh end after the tap) replaces the optimistic "you just dialed" live view.
-    if (inCall() || (callState === "ended" && typeof m.seq === "number" && m.seq > clickSeq)) pendingCallUntil = 0;
+    if (inCall() || (callState === "ended" && typeof m.seq === "number" && m.seq > clickSeq)) { pendingCallUntil = 0; callNotSeen = false; }
     renderResults(m, card);
     showPkgRows(pkg);
     renderOwnerText(card, pkg);
@@ -218,10 +218,16 @@
   var PENDING_CALL_MS = 90 * 1000;
   var flow = "before", callStartAt = 0, callEndAt = 0, sawLive = false, timerId = null;
   var pendingCallUntil = 0, pendingTimer = null, clickSeq = -1, pendingForClick = 0;
+  // 2026-10-08 (Sheri's call): if no call ever reaches this page within the 90 s grace, don't silently snap back to
+  // the "before" layout mid-call. Keep the layout, stop the timer and say so. Cleared by a real call state, a new
+  // tap on call, or the lease ending.
+  var callNotSeen = false, tapPending = false;
+  var NOT_SEEN_LABEL = "We can't see your call on this page\u2026";
+  var NOT_SEEN_STATUS = "If you're on the call now, it may be showing on a demo page you opened earlier. Hang up, then tap Call again to try from this page.";
   function inCall() { return callState === "connecting" || callState === "live"; }
   function computeFlow(card) {
     if (!lease) return "before";
-    if (inCall() || pendingCallUntil > Date.now()) return "live";
+    if (inCall() || pendingCallUntil > Date.now() || callNotSeen) return "live";
     if (callState === "ended" || firstCallEnded) return "after";
     return card && cardHasData(card) ? "live" : "before";
   }
@@ -232,11 +238,13 @@
   // Wall-clock based: timers are paused while Safari is in the background, so each tick recomputes.
   function tick() {
     var timer = $("live-timer");
-    timer.hidden = !callStartAt || (flow === "after" && !sawLive);
+    timer.hidden = !callStartAt || (flow === "after" && !sawLive) || notSeenNow();
     timer.textContent = fmtElapsed((flow === "live" ? Date.now() : callEndAt) - callStartAt);
   }
+  function notSeenNow() { return callNotSeen && !inCall() && pendingCallUntil <= Date.now(); }
   function applyFlow(card) {
     var next = computeFlow(card || (lastMsg && lastMsg.card) || {}), prev = flow, now = Date.now();
+    var notSeen = next === "live" && notSeenNow();
     if (inCall()) sawLive = true;
     if (next === "live" && prev !== "live") {
       var recentTap = lastCallClick > callEndAt && now - lastCallClick < 3 * 60 * 1000;
@@ -249,13 +257,17 @@
     flow = next;
     document.documentElement.setAttribute("data-flow", next);
     $("live-bar").hidden = next === "before";
-    $("live-label").textContent = next === "after" ? "Your call to Harborline Heating & Air ended" : "Live call to Harborline Heating & Air";
-    $("live-again").hidden = next !== "after";
+    if (notSeen) document.documentElement.setAttribute("data-call-seen", "no");
+    else document.documentElement.removeAttribute("data-call-seen");
+    $("live-label").textContent = notSeen ? NOT_SEEN_LABEL : next === "after" ? "Your call to Harborline Heating & Air ended" : "Live call to Harborline Heating & Air";
+    $("live-again").hidden = !(next === "after" || notSeen);
     clearInterval(timerId); timerId = null;
-    if (next === "live") timerId = setInterval(tick, 1000);
+    if (next === "live" && !notSeen) timerId = setInterval(tick, 1000);
     tick();
-    if (next === "live" && !inCall()) { $("call-status").textContent = STATUS.connecting; $("mood-note").hidden = true; }
-    document.title = next === "live" ? TITLE_LIVE : next === "after" && lastCaught ? TITLE_DONE : BASE_TITLE;
+    if (next === "live" && !inCall()) { $("call-status").textContent = notSeen ? NOT_SEEN_STATUS : STATUS.connecting; $("mood-note").hidden = true; }
+    // Back to "before" (no call, nothing caught): never leave a stale "Call coming in..." on screen.
+    if (next === "before") $("call-status").textContent = STATUS.idle;
+    document.title = next === "live" && !notSeen ? TITLE_LIVE : next === "after" && lastCaught ? TITLE_DONE : BASE_TITLE;
     if (next === "live" && prev !== "live" && document.visibilityState === "visible") scrollToText();
   }
   // Back on the tab shortly after tapping the call link: show the live view right away (the phone agent tells
@@ -267,9 +279,25 @@
     pendingForClick = lastCallClick;
     pendingCallUntil = now + PENDING_CALL_MS;
     clearTimeout(pendingTimer);
-    pendingTimer = setTimeout(function () { pendingCallUntil = 0; applyFlow(); }, PENDING_CALL_MS + 50);
+    pendingTimer = setTimeout(function () {
+      pendingCallUntil = 0;
+      // Nothing from a call ever reached this page: say so instead of snapping back to the "before" layout.
+      if (!inCall() && callState !== "ended" && !cardHasData((lastMsg && lastMsg.card) || {})) callNotSeen = true;
+      applyFlow();
+    }, PENDING_CALL_MS + 50);
   }
-  function noteCallTap() { lastCallClick = Date.now(); clickSeq = lastSeq; heartbeat(); }
+  // A tap on a call link: tell the Worker (heartbeat { tap: true }) so a call from this phone pairs with THIS page
+  // even if the caller's number is still linked to a page they opened earlier that no longer holds a line.
+  function noteCallTap() {
+    lastCallClick = Date.now(); clickSeq = lastSeq; tapPending = true;
+    if (callNotSeen) {
+      // trying again from the "can't see your call" view: keep the live layout (no jump) while the new call starts
+      callNotSeen = false;
+      assumeCallAfterTap();
+      applyFlow();
+    }
+    heartbeat();
+  }
   // The visitor left (phone app, tab switch, bfcache) while a call was starting or just after tapping call.
   function leftPage() {
     if ((callState === "connecting" || callState === "live" || Date.now() - lastCallClick < 5 * 60 * 1000) && !awayForCall) {
@@ -287,7 +315,7 @@
     assumeCallAfterTap();
     var wasLive = flow === "live";
     applyFlow();
-    if (flow === "live" && wasLive) scrollToText();
+    if (flow === "live" && wasLive && !notSeenNow()) scrollToText();
     returnCheckPending = true;
     clearTimeout(returnCheckTimer);
     returnCheckTimer = setTimeout(checkReturn, 4000);
@@ -604,7 +632,9 @@
     if (releaseIfIdle()) return;
     var mine = lease;
     heartbeatInFlight = true;
-    post("/lease/heartbeat", { sessionId: mine.sessionId, sessionToken: mine.sessionToken }).then(function (r) {
+    var hbBody = { sessionId: mine.sessionId, sessionToken: mine.sessionToken }, sentTap = tapPending;
+    if (sentTap) { hbBody.tap = true; tapPending = false; }
+    post("/lease/heartbeat", hbBody).then(function (r) {
       if (!lease || lease.sessionId !== mine.sessionId) return;
       if (r.ok) { if (r.number !== lease.number) showNumber(r.number); return; }
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
@@ -616,7 +646,10 @@
         $("start-err").textContent = "Too many demo screens are open from this network. Close one and try again.";
         $("start-err").hidden = false;
       }
-    }).catch(function () { /* transient; next beat retries */ }).then(function () {
+    }).catch(function () {
+      // transient; next beat retries (and re-sends the tap while it can still matter for routing)
+      if (sentTap && Date.now() - lastCallClick < 60 * 1000) tapPending = true;
+    }).then(function () {
       heartbeatInFlight = false;
       if (heartbeatQueued) { heartbeatQueued = false; heartbeat(); }
     });
@@ -627,7 +660,7 @@
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     firstCallEnded = false; awayForCall = false; endedWhileAway = false; awaySeq = -1;
-    pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0;
+    pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0; callNotSeen = false; tapPending = false;
     returnCheckPending = false; clearTimeout(returnCheckTimer); returnCheckTimer = null;
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
     // A replacement lease must not briefly reuse the prior session's results or reveal its switcher.
@@ -648,7 +681,7 @@
     wsClosedForGood = true; wsStateReady = false; heartbeatQueued = false;
     if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
-    pendingCallUntil = 0; clearTimeout(pendingTimer);
+    pendingCallUntil = 0; clearTimeout(pendingTimer); callNotSeen = false; tapPending = false;
     applyPkgUi();
     applyFlow({});
   }

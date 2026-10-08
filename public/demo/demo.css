@@ -146,6 +146,8 @@ html[data-flow="live"] #line, html[data-flow="after"] #line { padding:.75rem 1re
   background:rgba(8,14,32,.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
 html[data-flow="live"] #line { border-color:rgba(61,220,132,.45); }
 html[data-flow="after"] .live-dot { background:var(--gold-2); box-shadow:none; animation:none; }
+html[data-call-seen="no"] .live-dot { background:var(--gold-2); box-shadow:none; animation:none; }
+html[data-call-seen="no"] #line { border-color:var(--gold-line); }
 html[data-flow="live"] .grid, html[data-flow="after"] .grid { grid-template-columns:minmax(0, 1fr); }
 html[data-flow="live"] .owner-kicker, html[data-flow="after"] .owner-kicker { display:block; }
 html[data-flow="live"] #owner-text, html[data-flow="after"] #owner-text { scroll-margin-top:9rem; border-color:var(--gold-line);
