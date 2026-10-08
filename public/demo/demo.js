@@ -313,15 +313,15 @@
     var cityZip = [card.city, card.zip].filter(Boolean).map(String).join(" ");
     var urg = card.urgency ? String(card.urgency) : "";
     var vals = {
-      name: card.name ? String(card.name) : "",
+      name: cleanField(card.name, CAP.name),
       nameCheck: nameCheck(card),
       callback: card.callback ? String(card.callback) : "",
       city: cityZip,
-      issue: card.issue ? String(card.issue) : "",
+      issue: cleanField(card.issue, CAP.issue),
       urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
       tap: card.callback ? String(card.callback) : "",
-      window: pkg === "intake" && card.window ? String(card.window) : "",
-      appointment: pkg === "estimate" && card.appointment ? String(card.appointment) : "",
+      window: pkg === "intake" ? cleanField(card.window, CAP.window) : "",
+      appointment: pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "",
       mood: card.mood ? String(card.mood) : ""
     };
     var urgentPutThrough = pkg === "estimate" && urg === "emergency";
@@ -344,27 +344,58 @@
     $("sms-bubble").classList.toggle("is-empty", !any);
   }
 
-  // ---------- Caller text preview (mockup only): the text back a caller gets in the real service ----------
-  // Never includes a callback number, and a requested time stays a request for Dave to confirm.
-  var PHONEISH = /\+?[\d\u2022*(][\d\s().\u2022*-]{5,}[\d\u2022*]/g;
-  function stripPhone(m) {
-    var d = (m.match(/\d/g) || []).length, masked = (m.match(/[\u2022*]/g) || []).length;
-    return d >= 10 || (masked && d + masked >= 7) || /^\(?\d{3}\)?[-. ]\d{4}$/.test(m.trim()) ? "" : m;
+  // ---------- Caller-provided text going into the previews ----------
+  // Fields from the call (name, issue, window, time) are short-capped, scrubbed of phone numbers, and stripped of
+  // any phrase claiming a booking, dispatch or sent text: the templates carry the meaning, never the caller's words.
+  // Separators allowed inside a phone number: whitespace, . / ( ) + and every Unicode hyphen/dash/minus.
+  var PHONE_SEP = "\\s./()+\\-\\u00ad\\u2010-\\u2015\\u2212\\ufe58\\ufe63\\uff0d";
+  var PHONE_MASK = "xX*#\\u2022\\u00b7\\u25cf";
+  var PHONE_RUN = new RegExp("[+(]*[0-9" + PHONE_MASK + "](?:[" + PHONE_SEP + "]*[0-9" + PHONE_MASK + "])*\\)?", "g");
+  var PHONE_GROUP_SPLIT = new RegExp("[" + PHONE_SEP + "]+");
+  function phoneLike(run) {
+    var digits = (run.match(/[0-9]/g) || []).length, masks = run.length - run.replace(/[xX*#\u2022\u00b7\u25cf]/g, "").length;
+    if (masks >= 3 && digits + masks >= 7) return true; // (•••) •••-0148, 206-555-XXXX, XXX-XXX-XXXX
+    if (digits >= 10) return true;                       // 2065550123, +1 206 555 0123, 206/555/0123
+    if (digits < 7) return false;                        // Tue 9-11am, Oct 14, 10:30, 8–10
+    // 7-9 digits: one solid run (5550123) or a 3-digit group then 3-4 digits (555-0123, 206 555 01). Not "15 2026 2".
+    var g = run.replace(/[^0-9]+$/, "").split(PHONE_GROUP_SPLIT).filter(Boolean);
+    return g.some(function (x) { return x.length >= 7; }) || (g[0].length === 3 && g.length > 1 && g[1].length >= 3);
   }
-  function callerPart(v, max) {
-    var t = v ? String(v).replace(PHONEISH, stripPhone).replace(/\s+/g, " ").trim().replace(/[\s.,;:!?-]+$/, "")
-      .replace(/[\s,;:-]*\b(?:(?:call|text|reach)(?: me)?(?: back)?(?: at| on)?|my number(?: is)?|number(?: is)?)$/i, "")
-      .replace(/[\s.,;:!?-]+$/, "") : "";
-    if (t.length > max) t = t.slice(0, max - 1).trim() + "\u2026";
+  function scrubPhones(t) {
+    // A mask letter (x/X) only counts when it isn't part of a word ("box", "Xmas" stay).
+    return t.replace(PHONE_RUN, function (run, at, all) {
+      var before = at > 0 ? all.charAt(at - 1) : "", after = all.charAt(at + run.length);
+      if (/^[+(]*[xX]/.test(run) && /[A-Za-z]/.test(before)) return run;
+      if (/[xX]\)?$/.test(run) && /[A-Za-z]/.test(after)) return run;
+      return phoneLike(run) ? "" : run;
+    });
+  }
+  var CLAIM = /\b(?:book(?:ed|ing)?|confirm(?:ed|s|ation)?|schedul(?:ed|e|ing)|dispatch(?:ed|ing|es)?|technicians?|techs?|on (?:the|his|her|their|my|its) way|en route|sent|send(?:ing)?|texted|texting)\b/i;
+  function stripClaims(t) {
+    if (!CLAIM.test(t)) return t;
+    return t.split(/[.!?;\n]+|,|\s+(?:and|but|so|then)\s+/i).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x && !CLAIM.test(x); }).join(", ");
+  }
+  function cleanField(v, max) {
+    if (v == null || v === "") return "";
+    var t = stripClaims(scrubPhones(String(v)).replace(/\s+/g, " "))
+      .replace(/[\s.,;:!?\-]+$/, "")
+      .replace(/[\s.,;:!?\-]*\b(?:(?:call|text|reach)(?: me)?(?: back)?(?: at| on)?|my number(?: is)?|number(?: is)?)\s*$/i, "")
+      .replace(/^[\s.,;:!?\-]+|[\s.,;:!?\-]+$/g, "");
+    if (t.length > max) t = t.slice(0, max - 1).replace(/[\s.,;:!?\-]+$/, "") + "\u2026";
     return t;
   }
+  var CAP = { name: 24, issue: 60, window: 40, appointment: 40 };
+
+  // ---------- Caller text preview (mockup only): the text back a caller gets in the real service ----------
+  // Never includes a callback number, and a requested time stays a request for Dave to confirm.
   function callerText(card, pkg) {
-    var first = callerPart(String(card.name || "").trim().split(/\s+/)[0], 24);
+    var first = cleanField(cleanField(card.name, CAP.name).split(" ")[0], CAP.name);
     first = first.charAt(0).toUpperCase() + first.slice(1);
-    var issue = callerPart(card.issue, 80);
+    var issue = cleanField(card.issue, CAP.issue);
     if (issue && !/^[A-Z]{2}/.test(issue)) issue = issue.charAt(0).toLowerCase() + issue.slice(1);
-    var win = pkg === "intake" ? callerPart(card.window, 60) : "";
-    var appt = pkg === "estimate" ? callerPart(card.appointment, 60) : "";
+    var win = pkg === "intake" ? cleanField(card.window, CAP.window) : "";
+    var appt = pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "";
     var msg = "Hi " + (first || "there") + ", thanks for calling Harborline Heating & Air. " +
       (issue ? "We got your message about " + issue + ". " : "We got your message. ");
     if (win) msg += "You picked " + win + " for an estimate. Dave will confirm that time with you as soon as he's off the job.";
@@ -372,6 +403,8 @@
     else msg += "Dave will call you back as soon as he's off the job.";
     return msg;
   }
+  // Pure helpers, exposed for tools/test_demo_text.js.
+  window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, callerText: callerText };
   function renderCallerText(card, pkg) {
     var p = $("caller-msg"), msg = callerText(card, pkg || "coverage");
     if (p.textContent === msg) return;
@@ -397,17 +430,19 @@
     li.id = "dr-mine";
     var top = el("div", "dr-top");
     top.appendChild(el("span", "dr-time", "Just now"));
-    top.appendChild(el("span", "dr-name", card.name ? String(card.name) : "Your call"));
+    top.appendChild(el("span", "dr-name", cleanField(card.name, CAP.name) || "Your call"));
     top.appendChild(el("span", "dr-tag yours", "Your call"));
     if (urgent) top.appendChild(el("span", "dr-tag urgent", "Urgent"));
     li.appendChild(top);
-    li.appendChild(el("p", "dr-issue", card.issue ? String(card.issue) : "\u2014"));
+    li.appendChild(el("p", "dr-issue", cleanField(card.issue, CAP.issue) || "\u2014"));
     function meta(k, v) { var p = el("p", "dr-meta"); p.appendChild(el("span", "k", k + " ")); p.appendChild(document.createTextNode(v)); li.appendChild(p); }
     var nc = nameCheck(card);
     if (nc) meta("Name check:", nc);
     meta("Mood:", card.mood ? String(card.mood) : "\u2014");
-    if (pkg === "intake" && card.window) meta("Wants an estimate:", String(card.window) + " (Dave to confirm)");
-    if (pkg === "estimate" && card.appointment) meta("Estimate booked:", String(card.appointment) + " (demo)");
+    var win = pkg === "intake" ? cleanField(card.window, CAP.window) : "";
+    var appt = pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "";
+    if (win) meta("Wants an estimate:", win + " (Dave to confirm)");
+    if (appt) meta("Estimate booked:", appt + " (demo)");
     meta("Callback:", "Needs a callback" + (card.callback ? " \u00b7 " + String(card.callback) : ""));
     var sig = li.textContent;
     if (mine && mine.getAttribute("data-sig") === sig) return;
