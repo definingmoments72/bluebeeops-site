@@ -42,7 +42,11 @@ section { position:relative; padding:5rem 0; }
   -webkit-backdrop-filter:blur(16px) saturate(1.4); backdrop-filter:blur(16px) saturate(1.4); }
 .site-header .container { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:4.25rem; }
 .brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; color:var(--text); }
-.brand img { width:40px; height:40px; border-radius:50%; box-shadow:0 0 0 1px var(--gold-line), 0 0 18px rgba(75,123,255,.45); }
+.brand picture { flex:0 0 40px; width:40px; height:40px; }
+.site-header .btn-gold { white-space:nowrap; flex:none; }
+@media (max-width: 359px) { .brand .wordmark { display:none; } }
+@media (max-width: 400px) { .site-header .container { gap:.6rem; } .brand { gap:.5rem; } .brand .wordmark { font-size:.8rem; letter-spacing:.12em; } .site-header .btn-gold { padding-inline:.8rem; } }
+.brand img { max-width:none; object-fit:cover; width:40px; height:40px; border-radius:50%; box-shadow:0 0 0 1px var(--gold-line), 0 0 18px rgba(75,123,255,.45); }
 .wordmark { font-weight:800; font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; white-space:nowrap; }
 .wordmark .bb { color:#c9d3ea; }
 .wordmark .ops { color:var(--gold); }
@@ -269,7 +273,8 @@ section { position:relative; padding:5rem 0; }
 .site-footer a:hover { color:var(--gold-2); text-decoration:underline; }
 .footer-grid { display:grid; gap:2rem; }
 .footer-brand { display:flex; gap:1rem; align-items:flex-start; }
-.footer-brand img { width:56px; height:56px; border-radius:50%; box-shadow:0 0 0 1px var(--gold-line); }
+.footer-brand picture { flex:0 0 56px; width:56px; height:56px; }
+.footer-brand img { width:56px; height:56px; max-width:none; object-fit:cover; border-radius:50%; box-shadow:0 0 0 1px var(--gold-line); }
 .footer-brand p { margin:.4rem 0 0; }
 .site-footer h2 { font-size:.75rem; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:.8rem; font-weight:700; }
 .site-footer ul { list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
