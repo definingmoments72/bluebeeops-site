@@ -381,7 +381,7 @@
       nameCheck: nameCheck(card),
       callback: card.callback ? String(card.callback) : "",
       city: cityZip,
-      issue: scrubField(card.issue),
+      issue: daveIssue(card.issue),
       urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
       tap: card.callback ? String(card.callback) : "",
       window: pkg === "intake" ? scrubField(card.window) : "",
@@ -426,14 +426,21 @@
     var g = run.replace(/[^0-9]+$/, "").split(PHONE_GROUP_SPLIT).filter(Boolean);
     return g.some(function (x) { return x.length >= 7; }) || (g[0].length === 3 && g.length > 1 && g[1].length >= 3);
   }
-  function scrubPhones(t) {
+  function scrubPhones(t, mark) {
     // A mask letter (x/X) only counts when it isn't part of a word ("box", "Xmas" stay).
     return t.replace(PHONE_RUN, function (run, at, all) {
       var before = at > 0 ? all.charAt(at - 1) : "", after = all.charAt(at + run.length);
       if (/^[+(]*[xX]/.test(run) && /[A-Za-z]/.test(before)) return run;
       if (/[xX]\)?$/.test(run) && /[A-Za-z]/.test(after)) return run;
-      return phoneLike(run) ? "" : run;
+      return phoneLike(run) ? (mark || "") : run;
     });
+  }
+  // "call me back at / my number is" is removed ONLY right before a number that was actually scrubbed (2026-10-08:
+  // the old end-of-text strip also ate a bare "call back", so "...dog; wants call back" became "...dog; wants.").
+  var PHONE_MARK = "\u0000";
+  var LEAD_IN = /[\s.,;:!?\-]*\b(?:(?:call|text|reach)(?: me)?(?: back)?(?: at| on)?|my (?:cell |phone )?number(?: is)?|number(?: is)?)\s*\u0000/gi;
+  function scrubPhonesAndLeadIns(t) {
+    return scrubPhones(t, PHONE_MARK).replace(LEAD_IN, "").replace(/\u0000/g, "");
   }
   var CLAIM = /\b(?:book(?:ed|ing)?|confirm(?:ed|s|ation)?|schedul(?:ed|e|ing)|dispatch(?:ed|ing|es)?|technicians?|techs?|on (?:the|his|her|their|my|its) way|en route|sent|send(?:ing)?|texted|texting)\b/i;
   function stripClaims(t) {
@@ -441,16 +448,45 @@
     return t.split(/[.!?;\n]+|,|\s+(?:and|but|so|then)\s+/i).map(function (x) { return x.trim(); })
       .filter(function (x) { return x && !CLAIM.test(x); }).join(", ");
   }
+  // Cut at a whole word, never mid-word and never with an ellipsis (an ellipsis also forces UCS-2 in a real SMS).
+  function cutWords(t, max) {
+    if (t.length <= max) return t;
+    var c = t.slice(0, max + 1), sp = c.lastIndexOf(" ");
+    c = sp > 0 ? c.slice(0, sp) : t.slice(0, max);
+    return c.replace(/[\s.,;:!?\-]+$/, "");
+  }
   function cleanField(v, max) {
     if (v == null || v === "") return "";
-    var t = stripClaims(scrubPhones(String(v)).replace(/\s+/g, " "))
-      .replace(/[\s.,;:!?\-]+$/, "")
-      .replace(/[\s.,;:!?\-]*\b(?:(?:call|text|reach)(?: me)?(?: back)?(?: at| on)?|my number(?: is)?|number(?: is)?)\s*$/i, "")
+    var t = stripClaims(scrubPhonesAndLeadIns(String(v)).replace(/\s+/g, " "))
       .replace(/^[\s.,;:!?\-]+|[\s.,;:!?\-]+$/g, "");
-    if (t.length > max) t = t.slice(0, max - 1).replace(/[\s.,;:!?\-]+$/, "") + "\u2026";
-    return t;
+    return cutWords(t, max);
   }
+  // Callback-request clauses ("wants call back", "wants a call back", "wants Dave to call back"): every message call
+  // wants a callback, so they add nothing to either text. Only whole clauses that are ONLY a callback request go.
+  var CALLBACK_CLAUSE = /^(?:and\s+)?(?:(?:wants|would like|asks?(?: for)?|asking(?: for)?|requests?|requesting|needs?)\s+(?:(?:dave|him|someone)\s+to\s+)?(?:a\s+|to\s+)?(?:call(?:\s+(?:him|her|them|me))?\s*back|callback|call|hear back|return call)(?:\s+(?:from dave|asap|soon|today|please))?|call\s*back(?:\s+(?:requested|please))?|please call(?:\s+back)?)$/i;
+  var CLAUSE_SPLIT = /\s*[;\n]\s*|,\s+(?=(?:and\s+)?(?:wants|would like|asks?|asking|requests?|requesting|needs?|call\s*back|please call)\b)/i;
+  function dropCallbackClauses(t) {
+    var parts = String(t || "").split(CLAUSE_SPLIT).map(function (x) { return x.trim(); }).filter(Boolean);
+    return parts.filter(function (x) { return !CALLBACK_CLAUSE.test(x.replace(/[.!?,]+$/, "")); }).join(", ");
+  }
+  // Plain GSM-7 punctuation only: curly quotes, dashes and ellipses become ASCII; anything else outside GSM-7 goes.
+  var GSM7 = "@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\u00d8\u00f8\u00c5\u00e5_\u00c6\u00e6\u00df\u00c9 !\"#%&'()*+,-./0123456789:;<=>?\u00a1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00c4\u00d6\u00d1\u00dc\u00a7\u00bfabcdefghijklmnopqrstuvwxyz\u00e4\u00f6\u00f1\u00fc\u00e0";
+  function toGsm(t) {
+    t = String(t || "").replace(/[\u2018\u2019\u201a\u02bc\u2032]/g, "'").replace(/[\u201c\u201d\u201e\u2033]/g, '"')
+      .replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\u2026/g, "...").replace(/[\u00a0\u2000-\u200b\u202f]/g, " ");
+    var out = "";
+    for (var i = 0; i < t.length; i++) if (GSM7.indexOf(t.charAt(i)) !== -1) out += t.charAt(i);
+    return out.replace(/ {2,}/g, " ").trim();
+  }
+  function gsmField(t) { return toGsm(t).replace(/^[\s.,;:!?\-]+|[\s.,;:!?\-]+$/g, ""); }
+  function isGsm(t) { for (var i = 0; i < t.length; i++) if (GSM7.indexOf(t.charAt(i)) === -1) return false; return true; }
   var CAP = { name: 24, issue: 60, window: 40, appointment: 40 };
+  // Dave's text: the full note minus a callback-request clause ("; wants call back"): "Tap to call back" covers it.
+  function daveIssue(v) {
+    var t = scrubField(v);
+    var d = dropCallbackClauses(t);
+    return d && /[A-Za-z0-9]/.test(d) ? d : t;
+  }
   function scrubField(v) {
     if (v == null || v === "") return "";
     var t = scrubPhones(String(v)).replace(/[ \t]{2,}/g, " ").trim();
@@ -458,23 +494,65 @@
   }
 
   // ---------- Caller text preview (mockup only): the text back a caller gets in the real service ----------
-  // Never includes a callback number, and a requested time stays a request for Dave to confirm.
+  // Approved 2026-10-08 (Jase; /workspace/diag/caller-text-20261008/PROPOSAL.md). Never a callback number, a time
+  // promise or a booking; a requested time stays a request for Dave to confirm. First name once. Plain GSM-7
+  // punctuation, 306 characters max (2 SMS segments). The shop's caller_summary is used when it's on the card;
+  // otherwise Dave's issue note, cleaned, is the fallback.
+  var CALLER_TEXT_MAX = 306;
+  var SAFETY = /\b(?:gas|propane|carbon monoxide|co alarm|co detector|smoke|burning|sparks?)\b/i;
+  function callerFirstName(card) {
+    if (String(card.nameConfidence || "").toLowerCase() === "low") return "";
+    var f = toGsm(cleanField(cleanField(card.name, CAP.name).split(" ")[0], CAP.name));
+    if (!/^[A-Za-z\u00c0-\u00ff][A-Za-z\u00c0-\u00ff'\-]{0,23}$/.test(f)) return "";
+    return f.charAt(0).toUpperCase() + f.slice(1);
+  }
+  function callerSummary(card) {
+    var raw = card.callerSummary == null ? "" : String(card.callerSummary);
+    if (!raw || /[0-9]/.test(raw) || CLAIM.test(raw)) return ""; // the Worker already rejects these; belt and braces
+    var t = toGsm(raw).replace(/^[\s.,;:!?\-]+|[\s.,;:!?\-]+$/g, "");
+    if (!/[A-Za-z]{2}/.test(t) || t.length > 80) return "";
+    return /^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1);
+  }
+  function issueFragment(issue, max) {
+    var t = gsmField(cleanField(dropCallbackClauses(scrubPhonesAndLeadIns(String(issue || ""))), 400));
+    t = cutWords(t, max);
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+  }
   function callerText(card, pkg) {
-    var first = cleanField(cleanField(card.name, CAP.name).split(" ")[0], CAP.name);
-    first = first.charAt(0).toUpperCase() + first.slice(1);
-    var issue = cleanField(card.issue, CAP.issue);
-    if (issue && !/^[A-Z]{2}/.test(issue)) issue = issue.charAt(0).toLowerCase() + issue.slice(1);
-    var win = pkg === "intake" ? cleanField(card.window, CAP.window) : "";
-    var appt = pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "";
-    var msg = "Hi " + (first || "there") + ", thanks for calling Harborline Heating & Air. " +
-      (issue ? "We got your message about " + issue + ". " : "We got your message. ");
-    if (win) msg += "You picked " + win + " for an estimate. Dave will confirm that time with you as soon as he's off the job.";
-    else if (appt) msg += "Your requested estimate time: " + appt + ". Dave will confirm your requested time.";
-    else msg += "Dave will call you back as soon as he's off the job.";
-    return msg;
+    card = card || {}; pkg = pkg || "coverage";
+    var first = callerFirstName(card), summary = callerSummary(card), offTopic = !!(summary && card.offTopic === true);
+    var win = pkg === "intake" ? gsmField(cleanField(card.window, CAP.window)) : "";
+    var appt = pkg === "estimate" ? gsmField(cleanField(card.appointment, CAP.appointment)) : "";
+    var emergency = String(card.urgency || "") === "emergency";
+    var hi = "Hi " + (first || "there") + ", thanks for calling Harborline Heating & Air.";
+    var next = win ? " You asked for " + win + " for an estimate, and Dave will confirm the time when he calls you back."
+      : appt ? " You asked for " + appt + ", and Dave will confirm that time with you."
+      : offTopic ? " Heating and air is what we do, but he'll call you back as soon as he's off the job."
+      : " He'll call you back as soon as he's off the job.";
+    var tail = "";
+    if (emergency) {
+      tail = SAFETY.test(String(card.issue || "") + " " + summary) ? " If you smell gas or a CO alarm is going off, leave the house now and call 911."
+        : offTopic ? " If it can't wait, a pro who can come out now is your best bet."
+        : " If anyone is in danger, call 911.";
+    } else if (!offTopic) tail = " If anything changes before then, just give us a call.";
+    function build(fragMax, withTail) {
+      var heard;
+      if (summary) heard = " We passed your message about " + summary + " along to Dave.";
+      else {
+        var frag = issueFragment(card.issue, fragMax);
+        heard = frag ? " We passed your message along to Dave: " + frag + "." : " We passed your message along to Dave.";
+      }
+      return hi + heard + next + (withTail ? tail : "");
+    }
+    // Over 306: drop the friendly "if anything changes" line first (never a safety line), then shorten the fallback note.
+    var msg = build(80, true);
+    if (msg.length > CALLER_TEXT_MAX && !emergency) msg = build(80, false);
+    for (var m = 70; msg.length > CALLER_TEXT_MAX && m >= 0; m -= 10) msg = build(m, emergency);
+    return msg.length > CALLER_TEXT_MAX ? cutWords(msg, CALLER_TEXT_MAX) : msg;
   }
   // Pure helpers, exposed for tools/test_demo_text.js.
-  window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, scrubField: scrubField, callerText: callerText };
+  window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, scrubField: scrubField, callerText: callerText,
+    dropCallbackClauses: dropCallbackClauses, daveIssue: daveIssue, issueFragment: issueFragment, toGsm: toGsm, isGsm: isGsm, CALLER_TEXT_MAX: CALLER_TEXT_MAX };
   function renderCallerText(card, pkg) {
     var p = $("caller-msg"), msg = callerText(card, pkg || "coverage");
     if (p.textContent === msg) return;
@@ -504,7 +582,7 @@
     top.appendChild(el("span", "dr-tag yours", "Your call"));
     if (urgent) top.appendChild(el("span", "dr-tag urgent", "Urgent"));
     li.appendChild(top);
-    li.appendChild(el("p", "dr-issue", scrubField(card.issue) || "\u2014"));
+    li.appendChild(el("p", "dr-issue", daveIssue(card.issue) || "\u2014"));
     function meta(k, v) { var p = el("p", "dr-meta"); p.appendChild(el("span", "k", k + " ")); p.appendChild(document.createTextNode(v)); li.appendChild(p); }
     var nc = nameCheck(card);
     if (nc) meta("Name check:", nc);
