@@ -11,7 +11,7 @@
   var lease = null; // { sessionId, sessionToken, number }
   var hbTimer = null, pingTimer = null, wsTimer = null, ws = null, wsRetry = 0, wsClosedForGood = false;
   var callState = "idle", lastSeq = -1, ackedCallback = null, lastCallClick = 0;
-  var turnstileToken = null, widgetId = null;
+  var turnstileToken = null, widgetId = null, widgetTimer = null, turnstileUnsupported = false;
   var pendingLease = false, leaseInFlight = false, lineClosed = false;
 
   // ---------- package picker (Coverage / Intake / Estimate Request) ----------
@@ -314,6 +314,12 @@
     pickPkg(pkg);
     if (lease || lineClosed || leaseInFlight) return;
     show("start");
+    if (turnstileUnsupported) {
+      pendingLease = false;
+      $("start-status").textContent = IDLE_STATUS;
+      $("start-err").hidden = false;
+      return;
+    }
     $("start-err").hidden = true;
     pendingLease = true;
     if (turnstileToken) return requestLease();
@@ -321,6 +327,7 @@
     if (window.turnstile && widgetId !== null && !turnstileToken) {
       try { if (window.turnstile.isExpired && window.turnstile.isExpired(widgetId)) window.turnstile.reset(widgetId); } catch (e) {}
     }
+    if (widgetId === null) renderTurnstile();
   }
   function leaseDone() { leaseInFlight = false; pendingLease = false; applyPkgUi(); }
   function requestLease() {
@@ -353,7 +360,11 @@
     if (window.turnstile && widgetId !== null) window.turnstile.reset(widgetId);
   }
   function renderTurnstile() {
-    if (!window.turnstile || typeof window.turnstile.render !== "function") return setTimeout(renderTurnstile, 200);
+    if (widgetId !== null) return;
+    if (!window.turnstile || typeof window.turnstile.render !== "function") {
+      if (widgetTimer === null) widgetTimer = setTimeout(function () { widgetTimer = null; renderTurnstile(); }, 200);
+      return;
+    }
     widgetId = window.turnstile.render("#ts-widget", {
       sitekey: cfg.turnstileSiteKey,
       action: "lease",
@@ -367,6 +378,7 @@
       },
       "expired-callback": function () { resetTurnstile(); },
       "unsupported-callback": function () {
+        turnstileUnsupported = true;
         pendingLease = false;
         $("start-status").textContent = IDLE_STATUS;
         $("start-err").textContent = "This browser can't run the quick person check. Please try another browser."; $("start-err").hidden = false;
@@ -374,9 +386,9 @@
       "error-callback": function () {
         turnstileToken = null;
         if (pendingLease) {
-          pendingLease = false;
-          $("start-status").textContent = IDLE_STATUS;
-          $("start-err").textContent = "The quick person check didn't load. Please refresh the page and try again."; $("start-err").hidden = false;
+          // Retry is "auto" by default; keep the requested lease pending so a successful retry can finish it.
+          $("start-status").textContent = "The quick person check hit a problem. Retrying\u2026";
+          $("start-err").textContent = "If it doesn't recover, refresh the page and try again."; $("start-err").hidden = false;
         }
       }
     });
@@ -399,6 +411,8 @@
       // (#mode-note, shown above) and the normal buttons for people who have a demo booked.
       return;
     }
+    // An explicit click while /status was loading wins over the package from the original URL.
+    if (pendingLease || leaseInFlight || lease) return;
     hearLive(autoStartPkg, true);
   }
 
@@ -416,16 +430,20 @@
     var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
     for (var i = 0; i < goBtns.length; i++) goBtns[i].addEventListener("click", function (ev) { hearLive(ev.currentTarget.getAttribute("data-pkg-go")); });
     applyPkgUi();
-    $("retry").addEventListener("click", function () { show("start"); resetTurnstile(); pendingLease = true; $("start-status").textContent = "Quick check that you're a person\u2026"; });
+    $("retry").addEventListener("click", function () { resetTurnstile(); hearLive(chosenPkg); });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {
       if (s.state === "closed" || s.mode === "off") { if (autoStartPkg) scrollToLine(); return showClosed("off"); }
-      if (s.state === "busy") { if (autoStartPkg) scrollToLine(); return showBusy(s.nextFreeInMin); }
+      if (s.state === "busy") { pendingLease = false; if (autoStartPkg) scrollToLine(); return showBusy(s.nextFreeInMin); }
       $("mode-note").hidden = s.mode !== "scheduled-only";
       show("start");
       renderTurnstile();
       autoStart(s);
-    }).catch(function () { show("start"); renderTurnstile(); autoStart(null); });
+    }).catch(function () {
+      show("start");
+      renderTurnstile();
+      if (autoStartPkg && !pendingLease) $("start-status").textContent = "We couldn't check whether the demo line is open. Tap Hear it live to try.";
+    });
   });
 })();

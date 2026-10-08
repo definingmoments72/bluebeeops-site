@@ -59,7 +59,7 @@
 
         <!-- state: start -->
         <div data-state="start">
-          <p class="note" id="mode-note" hidden>Right now the line is open for scheduled demos only. If you have one booked, go ahead.</p>
+          <p class="note" id="mode-note" role="status" hidden>Right now the line is open for scheduled demos only. If you have one booked, go ahead.</p>
           <!-- Turnstile: one shared widget, appearance "interaction-only" (shown only if a visitor must interact). -->
           <div id="ts-widget" class="turnstile"></div>
           <p class="muted small" id="start-status" aria-live="polite">Pick a package and tap <strong>Hear it live</strong>. We'll hold a demo line for you for 15 minutes.</p>
@@ -80,14 +80,14 @@
         </div>
 
         <!-- state: busy -->
-        <div data-state="busy" hidden>
+        <div data-state="busy" role="status" hidden>
           <p class="big">All demo lines are busy.</p>
           <p class="muted" id="busy-msg">Try again in a few minutes.</p>
           <button type="button" class="btn btn-ghost" id="retry">Try again</button>
         </div>
 
         <!-- state: closed -->
-        <div data-state="closed" hidden>
+        <div data-state="closed" role="status" hidden>
           <p class="big" id="closed-title">The demo line is closed right now.</p>
           <p class="muted" id="closed-msg">Please check back later.</p>
         </div>
