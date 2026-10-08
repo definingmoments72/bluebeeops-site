@@ -14,8 +14,8 @@
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back,
-       and always opens at the top (no #hash jump, no restored scroll position). -->
-  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);try{if("scrollRestoration" in history)history.scrollRestoration="manual";if(location.hash)history.replaceState(null,"",location.pathname+location.search);}catch(e){}setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;var a=document.querySelectorAll("[data-pkg-auto-inert]");for(var i=0;i<a.length;i++){a[i].removeAttribute("inert");a[i].removeAttribute("data-pkg-auto-inert");}d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
+       and always opens at the top (no #hash jump, no restored scroll position). Only Coverage is live: intake/estimate fall back to it. -->
+  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;p="coverage";var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);try{if("scrollRestoration" in history)history.scrollRestoration="manual";if(location.hash)history.replaceState(null,"",location.pathname+location.search);}catch(e){}setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;var a=document.querySelectorAll("[data-pkg-auto-inert]");for(var i=0;i<a.length;i++){a[i].removeAttribute("inert");a[i].removeAttribute("data-pkg-auto-inert");}d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="stylesheet" href="/demo/demo.css">
   <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->
@@ -143,15 +143,15 @@
             <span class="pkg-desc">Answers missed and after-hours calls, takes the message, and texts Dave a recap.</span></div>
             <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="coverage" aria-label="Hear Coverage Service live">Hear it live</button>
           </div>
-          <div class="pkg-opt" data-pkg-row="intake">
+          <div class="pkg-opt soon" data-pkg-row="intake">
             <div class="pkg-body"><span class="pkg-name">Intake Service <span class="pkg-price">$249/mo</span></span>
             <span class="pkg-desc">Coverage plus daytime overflow. The caller picks an estimate window, and Dave confirms it with one tap.</span></div>
-            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="intake" aria-label="Hear Intake Service live">Hear it live</button>
+            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="intake" aria-label="Intake Service: coming soon" disabled>Coming soon</button>
           </div>
-          <div class="pkg-opt" data-pkg-row="estimate">
+          <div class="pkg-opt soon" data-pkg-row="estimate">
             <div class="pkg-body"><span class="pkg-name">Estimate Request Service <span class="pkg-price">$349/mo</span></span>
             <span class="pkg-desc">Books the estimate live on the call and puts urgent calls straight through to Dave.</span></div>
-            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="estimate" aria-label="Hear Estimate Request Service live">Hear it live</button>
+            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="estimate" aria-label="Estimate Request Service: coming soon" disabled>Coming soon</button>
           </div>
         </div>
       </section>
@@ -255,15 +255,15 @@
             <span class="sw-desc">Answers missed and after-hours calls, takes the message, and texts Dave a recap.</span>
             <span class="sw-now">Now set</span>
           </button>
-          <button type="button" class="sw-opt" data-pkg-switch="intake">
+          <button type="button" class="sw-opt" data-pkg-switch="intake" disabled>
             <span class="sw-name">Intake Service <span class="pkg-price">$249/mo</span></span>
             <span class="sw-desc">Coverage plus daytime overflow. The caller picks an estimate window, and Dave confirms it with one tap.</span>
-            <span class="sw-now">Now set</span>
+            <span class="sw-soon">Coming soon</span>
           </button>
-          <button type="button" class="sw-opt" data-pkg-switch="estimate">
+          <button type="button" class="sw-opt" data-pkg-switch="estimate" disabled>
             <span class="sw-name">Estimate Request Service <span class="pkg-price">$349/mo</span></span>
             <span class="sw-desc">Books the estimate live on the call and puts urgent calls straight through to Dave.</span>
-            <span class="sw-now">Now set</span>
+            <span class="sw-soon">Coming soon</span>
           </button>
         </div>
         <p class="muted small sw-status" id="sw-status" aria-live="polite"></p>
@@ -272,7 +272,7 @@
       </details>
     </section>
 
-    <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls are limited to about 2&frac12; minutes and 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
+    <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 5 minutes, with a limit of 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
   </main>
 
   <footer class="site-footer">

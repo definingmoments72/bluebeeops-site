@@ -16,18 +16,28 @@
 
   // ---------- package picker (Coverage / Intake / Estimate Request) ----------
   var PKGS = {
-    coverage: { name: "Coverage Service", hint: "Try it: describe a heating or cooling problem.", note: "" },
+    coverage: { name: "Coverage Service", live: true, hint: "Try it: describe a heating or cooling problem.", note: "" },
     intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows Harborline offers.",
       note: "Dave confirms the requested window with one tap. Nothing is booked until he does." },
     estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot Harborline offers, or say it's an emergency to hear the put-through.",
       note: "Demo schedule only: nobody will actually come out, and this demo line can't transfer calls." }
   };
   function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
+  // Only live packages can be picked or leased; the others show as "Coming soon".
+  function livePkg(v) { v = validPkg(v); return v && PKGS[v].live ? v : null; }
   // ?package= from the homepage plan cards ("Try a live demo call"). A valid value also auto-starts the
   // lease flow once (same path as tapping that package's "Hear it live"); plain /demo/ waits for a tap.
+  // A package that isn't live yet falls back to Coverage (the inline head script does the same for the overlay).
   // The page stays at the top: the call button is already the first thing under the headline.
   var urlPkg = (function () {
-    try { return validPkg(new URLSearchParams(window.location.search).get("package")); } catch (e) { return null; }
+    try {
+      var v = validPkg(new URLSearchParams(window.location.search).get("package"));
+      if (!v || livePkg(v)) return v;
+      var u = new URL(window.location.href);
+      u.searchParams.set("package", "coverage");
+      window.history.replaceState(null, "", u.pathname + u.search);
+      return "coverage";
+    } catch (e) { return null; }
   })();
   var chosenPkg = urlPkg || "coverage";
   var autoStartPkg = urlPkg, autoStarted = false;
@@ -463,7 +473,7 @@
     var rows = document.querySelectorAll("#pkg-picker [data-pkg-row]");
     for (var i = 0; i < rows.length; i++) rows[i].classList.toggle("selected", rows[i].getAttribute("data-pkg-row") === chosenPkg);
     var btns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
-    for (var j = 0; j < btns.length; j++) btns[j].disabled = leaseInFlight || lineClosed;
+    for (var j = 0; j < btns.length; j++) btns[j].disabled = !livePkg(btns[j].getAttribute("data-pkg-go")) || leaseInFlight || lineClosed;
     // The big picker only starts a lease; with a number held, switching lives in "Try another plan" at the bottom.
     $("pkg-picker").hidden = !!lease;
     $("hearing-name").textContent = PKGS[chosenPkg].name;
@@ -480,10 +490,11 @@
       var on = opts[i].getAttribute("data-pkg-switch") === chosenPkg;
       opts[i].setAttribute("aria-pressed", on ? "true" : "false");
       opts[i].classList.toggle("selected", on);
+      opts[i].disabled = !livePkg(opts[i].getAttribute("data-pkg-switch"));
     }
   }
   function switchPkg(v) {
-    v = validPkg(v);
+    v = livePkg(v);
     if (!v || !lease) return;
     if (v !== chosenPkg) pickPkg(v);
     var inCall = callState === "connecting" || callState === "live";
@@ -491,7 +502,7 @@
     $("sw-call").hidden = inCall;
   }
   function pickPkg(v) {
-    v = validPkg(v);
+    v = livePkg(v);
     if (!v || v === chosenPkg) return;
     chosenPkg = v;
     try {
@@ -657,6 +668,7 @@
   // A package's "Hear it live" button: select it, then (if no number is held yet) run the lease flow.
   // With a number already held it only switches the package for the next call (pickPkg -> /lease/package).
   function hearLive(pkg, auto) {
+    if (!livePkg(pkg)) return;
     pickPkg(pkg);
     if (lease || lineClosed || leaseInFlight) return;
     show("start");

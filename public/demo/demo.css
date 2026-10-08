@@ -87,6 +87,11 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .pkg-price { color:var(--gold-2); font-weight:600; font-size:.88rem; margin-left:.35rem; white-space:nowrap; }
 .pkg-desc { color:var(--muted); font-size:.9rem; line-height:1.45; }
 .pkg-go { white-space:nowrap; }
+.pkg-opt.soon { opacity:.6; }
+.pkg-opt.soon .pkg-go:disabled { opacity:1; color:var(--muted); background:transparent; border:1px dashed rgba(200,215,255,.25); }
+.sw-opt:disabled { opacity:.55; cursor:default; }
+.sw-opt:disabled:hover { border-color:var(--edge); background:rgba(255,255,255,.03); }
+.sw-soon { color:var(--muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
 .pkg-go[aria-pressed="true"] { cursor:default; box-shadow:0 0 0 2px rgba(255,236,190,.55); }
 @media (max-width:34rem) { .pkg-opt { grid-template-columns:minmax(0, 1fr); } .pkg-go { width:100%; } }
 .hearing { margin:.2rem 0 .3rem; }
