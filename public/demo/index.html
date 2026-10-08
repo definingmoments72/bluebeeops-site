@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Harborline demo line | Blue Bee Ops</title>
-<meta name="description" content="Call Harborline Heating & Air, a demo shop, and watch the card fill in from your call.">
+<meta name="description" content="Call Harborline Heating & Air, a demo shop, and watch the text the owner gets fill in from your call.">
   <!-- Not indexed until Jase opens the line to the public (launch gate). -->
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://bluebeeops.com/demo/">
@@ -13,8 +13,9 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back. -->
-  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;var a=document.querySelectorAll("[data-pkg-auto-inert]");for(var i=0;i<a.length;i++){a[i].removeAttribute("inert");a[i].removeAttribute("data-pkg-auto-inert");}d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
+  <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back,
+       and always opens at the top (no #hash jump, no restored scroll position). -->
+  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);try{if("scrollRestoration" in history)history.scrollRestoration="manual";if(location.hash)history.replaceState(null,"",location.pathname+location.search);}catch(e){}setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;var a=document.querySelectorAll("[data-pkg-auto-inert]");for(var i=0;i<a.length;i++){a[i].removeAttribute("inert");a[i].removeAttribute("data-pkg-auto-inert");}d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="stylesheet" href="/demo/demo.css">
   <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->
@@ -82,11 +83,19 @@
     <section class="intro">
       <p class="eyebrow">Demo</p>
       <h1>Call it and watch it fill.</h1>
-      <p class="lead">Call <strong>Harborline Heating &amp; Air</strong>, a made-up heating and air shop. Tell it about a problem like a homeowner would. The card below fills in from your call.</p>
+      <p class="lead">Call <strong>Harborline Heating &amp; Air</strong>, a made-up heating and air shop, and tell it about a problem like a homeowner would. Then watch the text Dave, the owner, gets fill in from your call.</p>
     </section>
 
     <div class="grid">
       <section class="panel glass" id="line" aria-labelledby="line-h">
+        <!-- Shown instead of the call block while a call is live (and after it ends). -->
+        <div class="live-bar" id="live-bar" hidden>
+          <span class="live-dot" aria-hidden="true"></span>
+          <p class="live-label" id="live-label" role="status">Live call to Harborline Heating &amp; Air</p>
+          <span class="live-timer" id="live-timer" aria-label="Call time">0:00</span>
+          <a class="live-again" id="live-again" href="#" hidden>Call again</a>
+        </div>
+
         <h2 id="line-h">Your demo number</h2>
 
         <!-- state: start -->
@@ -102,22 +111,14 @@
         <div data-state="leased" hidden>
           <p class="number" id="number" aria-live="polite"></p>
           <p class="hearing" aria-live="polite">You're hearing: <strong id="hearing-name">Coverage Service</strong></p>
-          <ol class="demo-steps">
-            <li class="demo-step">
-              <p class="step-label">Step 1</p>
-              <p class="step-title"><span class="on-touch">Tap to call and talk to Ara like a homeowner would.</span><span class="on-desk">Call the number (or scan the code) and talk to Ara like a homeowner would.</span></p>
-              <p class="muted small" id="pkg-hint"></p>
-              <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
-              <figure class="qr">
-                <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
-                <figcaption>Or scan with your phone's camera to call.</figcaption>
-              </figure>
-            </li>
-            <li class="demo-step">
-              <p class="step-label">Step 2</p>
-              <p class="step-title">Come back to this page after you hang up to see exactly what Dave would get.</p>
-            </li>
-          </ol>
+          <p class="call-title"><span class="on-touch">Tap to call and talk to Harborline like a homeowner would.</span><span class="on-desk">Call the number (or scan the code) and talk to Harborline like a homeowner would.</span></p>
+          <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
+          <p class="muted small" id="pkg-hint"></p>
+          <p class="call-howto">The call starts with a quick setup that walks you through it. <strong>Right after you dial, switch back to this tab</strong> to watch Dave's text fill in live. Speakerphone makes it easier.</p>
+          <figure class="qr">
+            <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
+            <figcaption>Or scan with your phone's camera to call.</figcaption>
+          </figure>
           <p class="note"><strong>This call may be recorded.</strong> You'll hear that at the start of the call too.</p>
           <p class="muted small" id="lease-note">We're holding this line for you while this page is open.</p>
         </div>
@@ -155,36 +156,13 @@
         </div>
       </section>
 
-      <div class="demo-col">
-      <section class="panel glass card" id="capture" aria-labelledby="cap-h">
-        <div class="card-head">
-          <h2 id="cap-h">Live Capture</h2>
-          <span class="badge" id="live-badge" hidden>Live</span>
-          <span class="tag-ended" id="ended-tag" hidden>Call ended</span>
-        </div>
-        <p class="status muted" id="call-status" aria-live="polite">Waiting for your call.</p>
-        <p class="mood-note" id="mood-note" hidden><span class="k">Caller mood note:</span> <span id="mood-note-v"></span></p>
-        <dl class="fields">
-          <div class="field" data-field="name"><dt>Name</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="callback"><dt>Callback</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="issue"><dt>Issue</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="city"><dt>City/ZIP</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="urgency"><dt>Urgency</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="mood"><dt>Caller mood</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="window" data-pkg="intake" hidden><dt>Estimate window</dt><dd>&mdash;</dd></div>
-          <div class="field" data-field="appointment" data-pkg="estimate" hidden><dt>Estimate booked</dt><dd>&mdash;</dd></div>
-        </dl>
-        <p class="muted small pkg-cardnote" id="card-note" hidden></p>
-        <a class="results-next" id="results-next" href="#owner-text" hidden>See the text Dave would get (preview)</a>
-        <p class="muted small">The callback number is masked because this screen may be public.</p>
-      </section>
-
       <section class="panel glass owner" id="owner-text" aria-labelledby="owner-h">
+        <p class="owner-kicker">You were the customer. Here's the other side.</p>
         <div class="card-head">
-          <h2 id="owner-h">The text Dave gets after the call</h2>
+          <h2 id="owner-h">This is what Dave, the shop owner, gets.</h2>
           <span class="tag-preview">Preview</span>
         </div>
-        <p class="muted small">For a real shop, Blue Bee Ops texts the owner a short recap like this when the call ends. Here it builds live from the card above as you talk.</p>
+        <p class="status muted" id="call-status" aria-live="polite">It fills in live during your call.</p>
         <div class="sms-phone" aria-label="Mockup of the owner text, built from your call">
           <div class="phone-top"><span class="phone-dot" aria-hidden="true"></span><b>Blue Bee Ops</b><span>to Dave</span></div>
           <div class="sms-bubble is-empty" id="sms-bubble">
@@ -203,53 +181,55 @@
             <p class="sms-actions" data-pkg="intake" hidden><span class="sms-tap">Tap to confirm this time</span></p>
           </div>
         </div>
+        <p class="mood-note" id="mood-note" hidden><span class="k">Caller mood note:</span> <span id="mood-note-v"></span></p>
+        <p class="muted small pkg-cardnote" id="card-note" hidden></p>
         <p class="sms-caption">Preview of the owner text. Nothing is sent from this demo.</p>
+        <p class="sms-caption">The callback number is masked because this screen may be public.</p>
       </section>
-      </div>
-    </div>
 
-    <section class="panel glass daily" id="daily" aria-labelledby="daily-h">
-      <div class="card-head">
-        <h2 id="daily-h">The daily report Dave gets</h2>
-        <span class="tag-preview">Example daily report</span>
-      </div>
-      <p class="muted small">At the end of each day, Blue Bee Ops sends the owner a summary of every call it answered. The calls below are sample data. When you call, yours shows up at the top.</p>
-      <div class="dr-sheet">
-        <p class="dr-title">Harborline Heating &amp; Air &middot; Today's calls</p>
-        <dl class="dr-stats">
-          <div><dt>Calls answered</dt><dd id="dr-answered">4</dd></div>
-          <div><dt>Urgent</dt><dd id="dr-urgent">2</dd></div>
-          <div><dt>Need a callback</dt><dd id="dr-open">1</dd></div>
-        </dl>
-        <ol class="dr-list" id="dr-list">
-            <li class="dr-item">
-              <div class="dr-top"><span class="dr-time">7:42 AM</span><span class="dr-name">Linda Park</span><span class="dr-tag urgent">Urgent</span></div>
-              <p class="dr-issue">No heat, furnace clicking but not lighting</p>
-              <p class="dr-meta"><span class="k">Mood:</span> Stressed, cold house with two kids</p>
-              <p class="dr-meta"><span class="k">Callback:</span> Called back 8:05 AM</p>
-            </li>
-            <li class="dr-item">
-              <div class="dr-top"><span class="dr-time">11:18 AM</span><span class="dr-name">Mike Torres</span></div>
-              <p class="dr-issue">Wants an estimate on a heat pump</p>
-              <p class="dr-meta"><span class="k">Mood:</span> Calm, comparing a few quotes</p>
-              <p class="dr-meta"><span class="k">Callback:</span> Called back 1:30 PM</p>
-            </li>
-            <li class="dr-item">
-              <div class="dr-top"><span class="dr-time">12:47 PM</span><span class="dr-name">Janet Ruiz</span></div>
-              <p class="dr-issue">Thermostat blank after a power outage</p>
-              <p class="dr-meta"><span class="k">Mood:</span> Friendly, a little annoyed</p>
-              <p class="dr-meta"><span class="k">Callback:</span> Called back 2:15 PM</p>
-            </li>
-            <li class="dr-item">
-              <div class="dr-top"><span class="dr-time">6:20 PM</span><span class="dr-name">Greg Olsen</span><span class="dr-tag urgent">Urgent</span><span class="dr-tag">After hours</span></div>
-              <p class="dr-issue">Burning smell from the vents when the heat runs</p>
-              <p class="dr-meta"><span class="k">Mood:</span> Worried, wants someone soon</p>
-              <p class="dr-meta"><span class="k">Callback:</span> Needs a callback</p>
-            </li>
-        </ol>
-      </div>
-      <p class="sms-caption">Example report with sample calls. Nothing is sent from this demo.</p>
-    </section>
+      <section class="panel glass daily" id="daily" aria-labelledby="daily-h">
+        <div class="card-head">
+          <h2 id="daily-h">Dave's end-of-day report</h2>
+          <span class="tag-preview">Example</span>
+        </div>
+        <p class="muted small" id="daily-lead">At the end of each day, Blue Bee Ops sends the owner a summary of every call it answered. The calls below are sample data. When your call ends, it shows up at the top.</p>
+        <div class="dr-sheet">
+          <p class="dr-title">Harborline Heating &amp; Air &middot; Today's calls</p>
+          <dl class="dr-stats">
+            <div><dt>Calls answered</dt><dd id="dr-answered">4</dd></div>
+            <div><dt>Urgent</dt><dd id="dr-urgent">2</dd></div>
+            <div><dt>Need a callback</dt><dd id="dr-open">1</dd></div>
+          </dl>
+          <ol class="dr-list" id="dr-list">
+              <li class="dr-item">
+                <div class="dr-top"><span class="dr-time">7:42 AM</span><span class="dr-name">Linda Park</span><span class="dr-tag urgent">Urgent</span></div>
+                <p class="dr-issue">No heat, furnace clicking but not lighting</p>
+                <p class="dr-meta"><span class="k">Mood:</span> Stressed, cold house with two kids</p>
+                <p class="dr-meta"><span class="k">Callback:</span> Called back 8:05 AM</p>
+              </li>
+              <li class="dr-item">
+                <div class="dr-top"><span class="dr-time">11:18 AM</span><span class="dr-name">Mike Torres</span></div>
+                <p class="dr-issue">Wants an estimate on a heat pump</p>
+                <p class="dr-meta"><span class="k">Mood:</span> Calm, comparing a few quotes</p>
+                <p class="dr-meta"><span class="k">Callback:</span> Called back 1:30 PM</p>
+              </li>
+              <li class="dr-item">
+                <div class="dr-top"><span class="dr-time">12:47 PM</span><span class="dr-name">Janet Ruiz</span></div>
+                <p class="dr-issue">Thermostat blank after a power outage</p>
+                <p class="dr-meta"><span class="k">Mood:</span> Friendly, a little annoyed</p>
+                <p class="dr-meta"><span class="k">Callback:</span> Called back 2:15 PM</p>
+              </li>
+              <li class="dr-item">
+                <div class="dr-top"><span class="dr-time">6:20 PM</span><span class="dr-name">Greg Olsen</span><span class="dr-tag urgent">Urgent</span><span class="dr-tag">After hours</span></div>
+                <p class="dr-issue">Burning smell from the vents when the heat runs</p>
+                <p class="dr-meta"><span class="k">Mood:</span> Worried, wants someone soon</p>
+                <p class="dr-meta"><span class="k">Callback:</span> Needs a callback</p>
+              </li>
+          </ol>
+        </div>
+        <p class="sms-caption">Example report with sample calls. Nothing is sent from this demo.</p>
+      </section>
+    </div>
 
     <section class="switcher" id="switcher" aria-label="Try another plan" hidden>
       <details id="switch-details">

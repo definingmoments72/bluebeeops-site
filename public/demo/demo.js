@@ -1,5 +1,5 @@
 // Harborline demo page: lease a pool number (Turnstile-protected), keep it armed with heartbeats,
-// and render the Live Capture card pushed over a WebSocket by the bluebee-demo Worker.
+// and fill in the owner text preview live from the call card pushed over a WebSocket by the bluebee-demo Worker.
 // No secrets here. All text is set with textContent (no HTML injection).
 (function () {
   "use strict";
@@ -17,14 +17,15 @@
   // ---------- package picker (Coverage / Intake / Estimate Request) ----------
   var PKGS = {
     coverage: { name: "Coverage Service", hint: "Try it: describe a heating or cooling problem.", note: "" },
-    intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows Ara offers.",
+    intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows Harborline offers.",
       note: "Dave confirms the requested window with one tap. Nothing is booked until he does." },
-    estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot Ara offers, or say it's an emergency to hear the put-through.",
+    estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot Harborline offers, or say it's an emergency to hear the put-through.",
       note: "Demo schedule only: nobody will actually come out, and this demo line can't transfer calls." }
   };
   function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
-  // ?package= from the homepage plan cards ("Hear this package"). A valid value also auto-starts the
+  // ?package= from the homepage plan cards ("Try a live demo call"). A valid value also auto-starts the
   // lease flow once (same path as tapping that package's "Hear it live"); plain /demo/ waits for a tap.
+  // The page stays at the top: the call button is already the first thing under the headline.
   var urlPkg = (function () {
     try { return validPkg(new URLSearchParams(window.location.search).get("package")); } catch (e) { return null; }
   })();
@@ -63,6 +64,7 @@
     var age = window.performance && performance.now ? performance.now() : AUTO_MIN_MS;
     setTimeout(function () {
       setAutoInert(false);
+      if (flow === "before") window.scrollTo(0, 0);
       d.classList.add("pkg-auto-out");
       d.classList.remove("pkg-auto");
       setTimeout(function () { d.classList.remove("pkg-auto-out"); }, AUTO_FADE_MS);
@@ -117,13 +119,18 @@
     link.textContent = "Tap to call " + fmt(e164);
     $("sw-call").setAttribute("href", "tel:" + e164);
     $("sw-call").textContent = "Call " + fmt(e164) + " again";
+    $("live-again").setAttribute("href", "tel:" + e164);
     drawQr(e164);
     show("leased");
     endAuto();
   }
 
-  // ---------- Live Capture card ----------
-  var STATUS = { idle: "Waiting for your call.", connecting: "Call coming in\u2026", live: "On the call. Watch the card fill in.", ended: "Here's what Ara took down from your call, and below it, a preview of the text Dave would get." };
+  // ---------- Call card -> Dave's text preview ----------
+  var STATUS = { idle: "It fills in live during your call.", connecting: "Call coming in\u2026 Dave's text fills in as you talk.",
+    live: "On the call. Watch Dave's text fill in as you talk.",
+    ended: "Your call ended. This is the text Dave would get, and your call is now at the top of his end-of-day report below." };
+  var CARD_FIELDS = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"];
+  function cardHasData(card) { return CARD_FIELDS.some(function (f) { return !!card[f]; }); }
   // The package the card shows: the call's own package once a call has started, else the page's pick.
   function cardPkg(m) { return (m && m.call && m.call !== "idle" && validPkg(m.package)) || chosenPkg; }
   function showPkgRows(pkg) {
@@ -141,28 +148,15 @@
     var prevState = callState;
     if ((m.call || "idle") !== callState) { idleSince = Date.now(); idleVerifiedAt = 0; }
     callState = m.call || "idle";
-    $("live-badge").hidden = callState !== "live";
     var card = m.card || {};
     var pkg = cardPkg(m);
+    // A real call state (or a fresh end after the tap) replaces the optimistic "you just dialed" live view.
+    if (inCall() || (callState === "ended" && typeof m.seq === "number" && m.seq > clickSeq)) pendingCallUntil = 0;
     renderResults(m, card);
     showPkgRows(pkg);
-    // "city" row shows City/ZIP together: card.city and card.zip (5 digits) from capture_update.
-    ["name", "callback", "issue", "city", "urgency", "mood", "window", "appointment"].forEach(function (f) {
-      var el = document.querySelector('.field[data-field="' + f + '"]');
-      var dd = el.querySelector("dd");
-      var v = f === "city"
-        ? [card.city, card.zip].filter(Boolean).map(String).join(" ")
-        : (card[f] ? String(card[f]) : "");
-      var shown = v || "\u2014";
-      if (dd.textContent !== shown) {
-        dd.textContent = shown;
-        el.classList.toggle("filled", !!v);
-        el.classList.remove("fresh"); void el.offsetWidth; if (v) el.classList.add("fresh");
-      }
-      if (f === "urgency") dd.className = v === "emergency" ? "urgency-emergency" : "";
-    });
     renderOwnerText(card, pkg);
-    renderDaily(card, pkg);
+    renderDaily(callState === "ended" || (firstCallEnded && callState === "idle") ? card : {}, pkg);
+    applyFlow(card);
     // Tell the Worker the confirmed callback is on screen (latency measurement, AC3).
     if (card.callback && card.callback !== ackedCallback && ws && ws.readyState === 1) {
       ackedCallback = card.callback;
@@ -171,30 +165,26 @@
     if (callState === "ended" && prevState !== "ended") callEnded();
   }
 
-  // ---------- Results view: "Here's what Ara caught" once a call ends ----------
-  // Most visitors call from the same phone, so they can't watch: when they come back to the browser after
-  // hanging up, they land on the results. Never claims a real text was sent (the owner text stays a PREVIEW).
-  var firstCallEnded = false, awayForCall = false, endedWhileAway = false, awaySeq = -1;
+  // ---------- Results once a call ends ----------
+  // Most visitors call from the same phone: they switch back to this tab right after dialing (mid-call) or
+  // after hanging up, and land on Dave's text. Never claims a real text was sent (the owner text stays a PREVIEW).
+  var firstCallEnded = false, awayForCall = false, endedWhileAway = false, awaySeq = -1, lastCaught = false;
   var returnCheckPending = false, returnCheckTimer = null, lastReturnAt = 0;
   function renderResults(m, card) {
     var ended = callState === "ended";
-    var caught = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"].some(function (f) { return !!card[f]; });
-    $("capture").classList.toggle("is-results", ended);
-    $("cap-h").textContent = !ended ? "Live Capture" : caught ? "Here's what Ara caught" : "Call ended";
-    $("ended-tag").hidden = !ended || !caught;
+    var caught = lastCaught = cardHasData(card);
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") +
       (!ended ? STATUS[callState] || "" : caught ? STATUS.ended
-        : "Ara didn't catch any details that time. Call again and describe a heating or cooling problem.");
+        : "Harborline didn't catch any details that time. Call again and describe a heating or cooling problem.");
     var mood = ended && card.mood ? String(card.mood) : "";
     $("mood-note-v").textContent = mood;
     $("mood-note").hidden = !mood;
-    $("results-next").hidden = !ended || !caught;
   }
   function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-  function scrollToResults() {
+  function scrollToText() {
     awayForCall = false;
     endedWhileAway = false;
-    var target = $("capture");
+    var target = $("owner-text");
     // Let layout settle first (iOS restores its own scroll position when the page comes back).
     setTimeout(function () {
       try { target.scrollIntoView({ behavior: reduceMotion() ? "instant" : "smooth", block: "start" }); }
@@ -203,9 +193,71 @@
   }
   function callEnded() {
     if (!firstCallEnded) { firstCallEnded = true; applySwitcher(); }
-    if (document.visibilityState === "visible") scrollToResults();
+    if (document.visibilityState === "visible") scrollToText();
     else { awayForCall = true; endedWhileAway = true; }
   }
+
+  // ---------- Page flow: before the call / live call / after the call ----------
+  // html[data-flow] drives the layout (demo.css). "live" collapses the call block into #live-bar with an
+  // elapsed timer and puts Dave's text first; "after" keeps that order and the bar shows how long the call took.
+  // A tap on the call link followed by a return to this tab counts as live until the Worker says otherwise,
+  // because iOS can drop the socket while Safari is in the background and the fresh state takes a moment.
+  var BASE_TITLE = document.title, TITLE_LIVE = "Live: Dave's text is filling in", TITLE_DONE = "Dave got your message \u2713";
+  var PENDING_CALL_MS = 90 * 1000;
+  var flow = "before", callStartAt = 0, callEndAt = 0, sawLive = false, timerId = null;
+  var pendingCallUntil = 0, pendingTimer = null, clickSeq = -1, pendingForClick = 0;
+  function inCall() { return callState === "connecting" || callState === "live"; }
+  function computeFlow(card) {
+    if (!lease) return "before";
+    if (inCall() || pendingCallUntil > Date.now()) return "live";
+    if (callState === "ended" || firstCallEnded) return "after";
+    return card && cardHasData(card) ? "live" : "before";
+  }
+  function fmtElapsed(ms) {
+    var t = Math.max(0, Math.floor(ms / 1000)), sec = t % 60;
+    return Math.floor(t / 60) + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+  // Wall-clock based: timers are paused while Safari is in the background, so each tick recomputes.
+  function tick() {
+    var timer = $("live-timer");
+    timer.hidden = !callStartAt || (flow === "after" && !sawLive);
+    timer.textContent = fmtElapsed((flow === "live" ? Date.now() : callEndAt) - callStartAt);
+  }
+  function applyFlow(card) {
+    var next = computeFlow(card || (lastMsg && lastMsg.card) || {}), prev = flow, now = Date.now();
+    if (inCall()) sawLive = true;
+    if (next === "live" && prev !== "live") {
+      var recentTap = lastCallClick > callEndAt && now - lastCallClick < 3 * 60 * 1000;
+      callStartAt = recentTap ? lastCallClick : now;
+      callEndAt = 0;
+      sawLive = inCall();
+    }
+    if (next === "after" && prev === "live") callEndAt = now;
+    if (next === "before") { callStartAt = 0; callEndAt = 0; sawLive = false; }
+    flow = next;
+    document.documentElement.setAttribute("data-flow", next);
+    $("live-bar").hidden = next === "before";
+    $("live-label").textContent = next === "after" ? "Your call to Harborline Heating & Air ended" : "Live call to Harborline Heating & Air";
+    $("live-again").hidden = next !== "after";
+    clearInterval(timerId); timerId = null;
+    if (next === "live") timerId = setInterval(tick, 1000);
+    tick();
+    if (next === "live" && !inCall()) { $("call-status").textContent = STATUS.connecting; $("mood-note").hidden = true; }
+    document.title = next === "live" ? TITLE_LIVE : next === "after" && lastCaught ? TITLE_DONE : BASE_TITLE;
+    if (next === "live" && prev !== "live" && document.visibilityState === "visible") scrollToText();
+  }
+  // Back on the tab shortly after tapping the call link: show the live view right away (the phone agent tells
+  // visitors to swipe back mid-call), then let the fresh socket state confirm or correct it.
+  function assumeCallAfterTap() {
+    var now = Date.now();
+    if (!lease || inCall() || !lastCallClick || lastCallClick <= callEndAt || now - lastCallClick > 3 * 60 * 1000) return;
+    if (pendingForClick === lastCallClick) return;
+    pendingForClick = lastCallClick;
+    pendingCallUntil = now + PENDING_CALL_MS;
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(function () { pendingCallUntil = 0; applyFlow(); }, PENDING_CALL_MS + 50);
+  }
+  function noteCallTap() { lastCallClick = Date.now(); clickSeq = lastSeq; heartbeat(); }
   // The visitor left (phone app, tab switch, bfcache) while a call was starting or just after tapping call.
   function leftPage() {
     if ((callState === "connecting" || callState === "live" || Date.now() - lastCallClick < 5 * 60 * 1000) && !awayForCall) {
@@ -220,6 +272,10 @@
     if (now - lastReturnAt < 500) return;
     lastReturnAt = now;
     if (!lease) return;
+    assumeCallAfterTap();
+    var wasLive = flow === "live";
+    applyFlow();
+    if (flow === "live" && wasLive) scrollToText();
     returnCheckPending = true;
     clearTimeout(returnCheckTimer);
     returnCheckTimer = setTimeout(checkReturn, 4000);
@@ -233,11 +289,11 @@
     // A cached "ended" may belong to the previous call. Only scroll if ending was observed while away,
     // or a fresh socket state advanced beyond the sequence seen when the visitor left.
     var hasNewEnd = endedWhileAway || (wsStateReady && lastSeq > awaySeq);
-    if (awayForCall && callState === "ended" && hasNewEnd) scrollToResults();
+    if (awayForCall && callState === "ended" && hasNewEnd) scrollToText();
     else { awayForCall = false; endedWhileAway = false; }
   }
 
-  // How sure Ara is of the caller's name (card.nameConfidence + card.nameNote), e.g. "Low confidence \u00b7 heard unclearly twice; best guess".
+  // How sure the phone agent is of the caller's name (card.nameConfidence + card.nameNote), e.g. "Low confidence \u00b7 heard unclearly twice; best guess".
   // High, medium and low are shown; unknown or missing values (including older Workers) give "".
   var NAME_CONF = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" };
   function nameCheck(card) {
@@ -249,7 +305,7 @@
   }
 
   // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
-  // Built from the same card fields as Live Capture. Values go in with textContent only.
+  // Built from the call card fields as they arrive. Values go in with textContent only.
   var SMS_TITLE = { coverage: "Harborline - new call (Blue Bee Ops)", intake: "Harborline - new call + estimate request", estimate: "Harborline - estimate booked (Blue Bee Ops)" };
   function renderOwnerText(card, pkg) {
     pkg = pkg || "coverage";
@@ -287,7 +343,7 @@
     $("sms-bubble").classList.toggle("is-empty", !any);
   }
 
-  // ---------- Example daily report: sample calls + this visitor's call on top (textContent only) ----------
+  // ---------- Example end-of-day report: sample calls + this visitor's call on top once it ends (textContent only) ----------
   var DR_BASE = { answered: 4, urgent: 2, open: 1 };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function renderDaily(card, pkg) {
@@ -480,6 +536,7 @@
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     firstCallEnded = false; awayForCall = false; endedWhileAway = false; awaySeq = -1;
+    pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0;
     returnCheckPending = false; clearTimeout(returnCheckTimer); returnCheckTimer = null;
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
     // A replacement lease must not briefly reuse the prior session's results or reveal its switcher.
@@ -500,7 +557,9 @@
     wsClosedForGood = true; wsStateReady = false; heartbeatQueued = false;
     if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
+    pendingCallUntil = 0; clearTimeout(pendingTimer);
     applyPkgUi();
+    applyFlow({});
   }
   function showBusy(min) {
     $("busy-msg").textContent = min ? "A line should free up in about " + min + " minute" + (min === 1 ? "" : "s") + "." : "Try again in a few minutes.";
@@ -586,7 +645,7 @@
       turnstileToken = null;
       leaseInFlight = false;
       $("start-status").textContent = IDLE_STATUS;
-      if (r.ok) { startLease(r); leaseDone(); if (autoStarted) scrollToLine(); return; }
+      if (r.ok) { startLease(r); leaseDone(); return; }
       leaseDone();
       endAuto();
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
@@ -645,18 +704,13 @@
     });
   }
 
-  // ---------- auto-start from ?package= (homepage "Hear this package") ----------
-  function scrollToLine() {
-    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    try { $("line").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); } catch (e) { $("line").scrollIntoView(); }
-  }
+  // ---------- auto-start from ?package= (homepage "Try a live demo call") ----------
   // Runs once, only after /status says the line is open. The Turnstile widget already runs its check on
   // render (execution "render", the default), so this just asks for the lease as soon as that token arrives,
   // exactly like an early tap on "Hear it live". If Cloudflare needs interaction, the widget appears.
   function autoStart(status) {
     if (!autoStartPkg || autoStarted) return;
     autoStarted = true;
-    scrollToLine();
     if (status && status.mode === "scheduled-only") {
       // Public visitors can't call in scheduled-only mode: don't take a line; keep the scheduled-demo note
       // (#mode-note, shown above) and the normal buttons for people who have a demo booked.
@@ -682,12 +736,17 @@
     if (document.visibilityState !== "visible") { leftPage(); return; }
     cameBack();
   });
-  window.addEventListener("pageshow", function (ev) { if (ev.persisted) cameBack(); });
+  // iOS can return from another app via a bfcache restore (pageshow, persisted) without a visibilitychange.
+  window.addEventListener("pageshow", function (ev) {
+    if (ev.persisted) cameBack();
+    else if (autoStartPkg && flow === "before") window.scrollTo(0, 0);
+  });
 
   document.addEventListener("DOMContentLoaded", function () {
     var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
     for (var i = 0; i < goBtns.length; i++) goBtns[i].addEventListener("click", function (ev) { hearLive(ev.currentTarget.getAttribute("data-pkg-go")); });
     applyPkgUi();
+    applyFlow({});
     if (autoStartPkg) {
       setAutoInert(document.documentElement.classList.contains("pkg-auto"));
       // Same words as gettingMsg(), with the package name in gold; rewriting it also lets the live region announce it.
@@ -698,14 +757,15 @@
       msg.appendChild(document.createTextNode(gettingMsg().slice(at + name.length)));
     }
     $("retry").addEventListener("click", function () { resetTurnstile(); hearLive(chosenPkg); });
-    $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
-    $("sw-call").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
+    $("call-link").addEventListener("click", noteCallTap);
+    $("sw-call").addEventListener("click", noteCallTap);
+    $("live-again").addEventListener("click", noteCallTap);
     var swBtns = document.querySelectorAll("#switcher [data-pkg-switch]");
     for (var k = 0; k < swBtns.length; k++) swBtns[k].addEventListener("click", function (ev) { switchPkg(ev.currentTarget.getAttribute("data-pkg-switch")); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {
-      if (s.state === "closed" || s.mode === "off") { if (autoStartPkg) scrollToLine(); return showClosed("off"); }
-      if (s.state === "busy") { pendingLease = false; if (autoStartPkg) scrollToLine(); return showBusy(s.nextFreeInMin); }
+      if (s.state === "closed" || s.mode === "off") return showClosed("off");
+      if (s.state === "busy") { pendingLease = false; return showBusy(s.nextFreeInMin); }
       $("mode-note").hidden = s.mode !== "scheduled-only";
       show("start");
       renderTurnstile();

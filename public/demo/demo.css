@@ -18,6 +18,7 @@
 /* home.css pads every <section>; the demo's panels are sections too */
 .demo-main section { padding:0; }
 .demo-main .intro { padding:2.75rem 0 2.25rem; max-width:44rem; }
+@media (max-width:40rem) { .demo-main .intro { padding:1.5rem 0 1.25rem; } .demo-main .intro .eyebrow { margin-bottom:.6rem; } }
 .demo-main h1 { font-size:clamp(2.3rem, 1.4rem + 3.6vw, 3.8rem); font-weight:800; letter-spacing:-.04em; line-height:1.04; margin-bottom:1rem;
   background:linear-gradient(180deg, #fff 30%, #b9c6e8); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .demo-main .lead { margin:0; color:var(--muted); opacity:1; }
@@ -25,11 +26,9 @@
 .demo-main h2 { font-size:1.2rem; letter-spacing:-.01em; margin:0 0 1rem; }
 
 .grid { display:grid; gap:1.25rem; grid-template-columns:minmax(0, 1fr); }
-@media (min-width:860px) { .grid { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); align-items:start; } }
-.demo-col { display:grid; gap:1.25rem; min-width:0; }
+@media (min-width:860px) { .grid { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); align-items:start; } .grid > .daily { grid-column:1 / -1; } }
 .demo-main .panel { padding:1.5rem; }
 @media (max-width:30rem) { .demo-main .panel { padding:1.2rem; } }
-#capture { border-color:var(--gold-line); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(217,180,106,.08), 0 30px 70px -30px rgba(43,84,212,.7); }
 
 .muted { color:var(--muted); }
 .small { font-size:.88rem; }
@@ -45,28 +44,16 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .number { font-size:clamp(2.1rem, 1.5rem + 3vw, 3.3rem); font-weight:800; letter-spacing:-.01em; margin:.2rem 0 1rem; font-variant-numeric:tabular-nums;
   background:linear-gradient(180deg, #fff, #8fa8ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .call { width:100%; max-width:22rem; }
-@media (hover:hover) and (pointer:fine) { .call { display:none; } }
-.qr { margin:1.2rem 0; }
+.qr { margin:1rem 0 1.2rem; }
 .qr svg { width:180px; height:180px; background:#fff; border-radius:12px; padding:10px; display:block; box-shadow:0 0 0 1px var(--gold-line), 0 0 30px rgba(75,123,255,.35); }
 .qr figcaption { color:var(--muted); font-size:.9rem; margin-top:.5rem; }
 .note { border-left:2px solid var(--gold); padding-left:.8rem; color:#cdd5ea; }
 
 .card-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
 .card-head h2 { margin-bottom:.6rem; }
-.badge { flex:none; background:var(--live); color:#03200f; font-weight:800; font-size:.75rem; letter-spacing:.1em; text-transform:uppercase;
-  padding:.22rem .65rem; border-radius:999px; box-shadow:0 0 14px rgba(61,220,132,.55); animation:live-pulse 1.6s ease-in-out infinite; }
 @keyframes live-pulse { 50% { opacity:.55; } }
 .status { margin:.2rem 0 1rem; }
-.fields { margin:0; display:grid; gap:.65rem; }
-.field { display:grid; grid-template-columns:6.5rem minmax(0, 1fr); gap:.75rem; padding:.75rem .9rem; border-radius:12px;
-  background:rgba(255,255,255,.03); border:1px solid var(--edge); transition:border-color .4s, box-shadow .4s; }
-.field dt { color:var(--faint); font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; padding-top:.2rem; }
-.field dd { margin:0; font-weight:650; overflow-wrap:anywhere; }
-.field.filled { border-color:var(--gold-line); box-shadow:0 0 18px -8px rgba(217,180,106,.5); }
-.field.fresh dd { animation:fill .9s ease-out; }
 @keyframes fill { from { color:var(--gold-2); transform:translateY(3px); } to { color:var(--text); transform:none; } }
-.urgency-emergency { color:#ffb4a8; }
-#capture > .small:last-child { margin:1rem 0 0; }
 
 /* Owner text preview (mockup only; the demo never sends a text) */
 .tag-preview { flex:none; font-size:.7rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; padding:.28rem .65rem; border-radius:999px;
@@ -87,6 +74,7 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .sms-bubble.is-empty { opacity:.7; }
 @keyframes fill-sms { from { color:var(--gold-2); } to { color:#fff; } }
 .sms-caption { margin:.9rem 0 0; font-size:.82rem; color:var(--faint); text-align:center; }
+.sms-caption + .sms-caption { margin-top:.3rem; }
 
 /* Package picker: each package has its own gold "Hear it live" button */
 .pkg-picker { margin:1.25rem 0 .9rem; display:grid; gap:.6rem; min-width:0; }
@@ -104,28 +92,50 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .hearing { margin:.2rem 0 .3rem; }
 .hearing strong { color:var(--gold-2); }
 
-/* Two steps under the number: call, then come back to see the results */
-.demo-steps { list-style:none; margin:1rem 0 1.2rem; padding:0; display:grid; gap:.7rem; }
-.demo-step { padding:.95rem 1rem; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid var(--edge); min-width:0; }
-.demo-step:first-child { border-color:var(--gold-line); background:rgba(217,180,106,.05); }
-.step-label { margin:0 0 .2rem; color:var(--gold-2); font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.14em; }
-.step-title { margin:0; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
-.demo-step .qr { margin:1rem 0 0; }
-.demo-step .call { margin-top:.9rem; }
+/* Before the call: one big call button, then how the call works. Phones (touch or narrow screens) get the button
+   and no QR code or big number; desktops get the number and QR code to scan with a phone. */
+.call-title { margin:.6rem 0 0; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+#call-link { margin-top:.9rem; min-height:3.6rem; font-size:1.1rem; }
+#pkg-hint { margin:.6rem 0 0; }
+.call-howto { margin:.9rem 0 0; padding:.85rem 1rem; border-radius:14px; background:rgba(217,180,106,.06); border:1px solid var(--gold-line);
+  color:#cdd5ea; line-height:1.5; }
+.call-howto strong { color:var(--text); }
 .on-desk { display:none; }
-@media (hover:hover) and (pointer:fine) { .on-touch { display:none; } .on-desk { display:inline; } }
-#pkg-hint { margin:.35rem 0 0; }
+@media (hover:hover) and (pointer:fine) and (min-width:40.01rem) {
+  .on-touch, .call { display:none; }
+  .on-desk { display:inline; }
+}
+@media not all and (hover:hover) and (pointer:fine) and (min-width:40.01rem) {
+  .qr, #number { display:none; }
+}
 
-/* Results view once a call ends ("Here's what Ara caught") */
-.tag-ended { flex:none; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; padding:.28rem .65rem; border-radius:999px;
-  color:#1a1305; background:var(--gold-2); margin-bottom:.6rem; }
-#capture.is-results h2 { font-size:1.45rem; color:var(--gold-2); }
-#capture.is-results .status { color:var(--text); }
-#capture.is-results .field:not(.filled) { opacity:.5; }
-.mood-note { margin:0 0 1rem; padding:.75rem .9rem; border-radius:12px; border-left:3px solid var(--gold); background:rgba(217,180,106,.08);
+.mood-note { margin:1rem 0 0; padding:.75rem .9rem; border-radius:12px; border-left:3px solid var(--gold); background:rgba(217,180,106,.08);
   color:var(--text); font-weight:600; overflow-wrap:anywhere; }
 .mood-note .k { color:var(--gold-2); font-weight:700; }
-.results-next { display:inline-block; margin:1rem 0 0; color:var(--gold-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+
+/* Who sees what: the visitor was the caller; the phone mockup is the owner's side */
+.owner-kicker { display:none; margin:0 0 .4rem; color:var(--gold-2); font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+
+/* During and after a call (html[data-flow], set by demo.js): the call block collapses into a slim bar and
+   Dave's text comes first, filling in live. */
+.live-bar { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem .7rem; }
+.live-dot { flex:none; width:.65rem; height:.65rem; border-radius:50%; background:var(--live); box-shadow:0 0 12px rgba(61,220,132,.75);
+  animation:live-pulse 1.6s ease-in-out infinite; }
+.live-label { margin:0; flex:1 1 12rem; min-width:0; font-weight:700; line-height:1.35; }
+.live-timer { flex:none; font-weight:800; font-variant-numeric:tabular-nums; color:var(--gold-2); }
+.live-again { flex:none; color:var(--gold-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+html[data-flow="live"] .intro, html[data-flow="after"] .intro { display:none; }
+html[data-flow="live"] .demo-main, html[data-flow="after"] .demo-main { padding-top:1rem; }
+html[data-flow="live"] #line > :not(#live-bar), html[data-flow="after"] #line > :not(#live-bar) { display:none !important; }
+html[data-flow="live"] #line, html[data-flow="after"] #line { padding:.75rem 1rem; border-radius:16px; position:sticky; top:4.5rem; z-index:5;
+  background:rgba(8,14,32,.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+html[data-flow="live"] #line { border-color:rgba(61,220,132,.45); }
+html[data-flow="after"] .live-dot { background:var(--gold-2); box-shadow:none; animation:none; }
+html[data-flow="live"] .grid, html[data-flow="after"] .grid { grid-template-columns:minmax(0, 1fr); }
+html[data-flow="live"] .owner-kicker, html[data-flow="after"] .owner-kicker { display:block; }
+html[data-flow="live"] #owner-text, html[data-flow="after"] #owner-text { scroll-margin-top:9rem; border-color:var(--gold-line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(217,180,106,.08), 0 30px 70px -30px rgba(43,84,212,.7); }
+#owner-text { scroll-margin-top:5.5rem; }
 
 /* "Try another plan": small, understated, at the bottom; shown only after the first call ends */
 .demo-main .switcher { margin-top:1.25rem; }
@@ -158,7 +168,7 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .sms-tap { display:inline-block; padding:.3rem .8rem; border-radius:999px; font-weight:700; font-size:.85rem; color:#0b1736; background:var(--gold-2); }
 
 /* Example daily report (sample data + the visitor's call on top) */
-.demo-main .daily { margin-top:1.25rem; }
+.demo-main .daily { margin-top:0; }
 .dr-sheet { margin-top:1rem; padding:1.1rem; border-radius:18px; background:rgba(255,255,255,.03); border:1px solid var(--edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(217,180,106,.1); }
 .dr-title { margin:0 0 .9rem; font-weight:700; color:var(--gold-2); }
@@ -238,4 +248,4 @@ html.pkg-auto-out .bbl-stage { transform:scale(1.06); }
 
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
 
-@media (prefers-reduced-motion:reduce) { .badge, .field.fresh dd, .sms-bubble .v.fresh { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .live-dot, .sms-bubble .v.fresh { animation:none; } }
