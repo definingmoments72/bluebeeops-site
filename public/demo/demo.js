@@ -248,7 +248,9 @@
     var caught = lastCaught = cardHasData(card);
     var during = inCall() && callRepeat ? STATUS.repeat
       : callState === "live" && callPhase === "wrapup" ? STATUS.wrapup : STATUS[callState] || "";
-    $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") +
+    // A remembered repeat call has its own complete welcome line. Keep the generic "Returning caller."
+    // prefix for second+ walkthrough calls, but don't duplicate it ahead of that memory-specific copy.
+    $("call-status").textContent = (m.returning && callState !== "idle" && !(inCall() && callRepeat) ? "Returning caller. " : "") +
       (!ended ? during : caught ? STATUS.ended
         : "Harborline didn't catch any details that time. Call again and describe a heating or cooling problem.");
     var mood = ended && card.mood ? String(card.mood) : "";
@@ -333,6 +335,10 @@
   function newCallStarted() {
     callRepeat = false;
     wrapupPending = false;
+    // A response to an in-flight /lease/fresh belongs to the choice the Worker just consumed. Invalidate it so
+    // it cannot restore the checked state or enqueue a compensating fresh:false request after the call starts.
+    freshReq++;
+    freshBusy = false;
     setFresh(false, true);
   }
 

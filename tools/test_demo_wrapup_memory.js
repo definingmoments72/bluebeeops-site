@@ -294,6 +294,16 @@ async function pageTests() {
     await t.clock.advance(3000);
     ck("D not retried", t.fresh().length === 1, t.fresh().length);
   }
+  // D2) a call can start while /lease/fresh is still resolving: the consumed one-shot stays unchecked and
+  // the stale response must not enqueue a fresh:false request.
+  {
+    const t = await lease({ features: MEM_ON });
+    t.toggle(0, true);
+    t.wsSend({ type: "state", call: "connecting", round: 1, card: {} });
+    await t.clock.advance(3000);
+    ck("D2 new call wins race with in-flight fresh request", t.freshBoxes.every((b) => !b.checked));
+    ck("D2 stale fresh response sends no compensating request", t.fresh().length === 1 && t.fresh()[0].body.fresh === true, t.fresh().map((x) => x.body.fresh));
+  }
   // E) wrap-up flip while visible: one scroll to both texts, glow added then removed
   {
     const t = await lease({ features: WRAP_ON });
@@ -359,9 +369,9 @@ async function pageTests() {
   {
     const t = await lease({ features: MEM_ON });
     t.wsSend({ type: "state", call: "connecting", round: 1, phase: "shop", repeat: true, returning: true, card: {} }); await t.clock.advance(10);
-    ck("I repeat status line", t.status() === "Returning caller. Welcome back. This time it's just the live call.", t.status());
+    ck("I repeat status line", t.status() === "Welcome back. This time it's just the live call.", t.status());
     t.wsSend({ type: "state", call: "live", round: 1, phase: "shop", repeat: true, returning: true, card: { name: "Sam" } }); await t.clock.advance(10);
-    ck("I repeat status line while live", /Welcome back\. This time it's just the live call\.$/.test(t.status()), t.status());
+    ck("I repeat status line while live", t.status() === "Welcome back. This time it's just the live call.", t.status());
     t.wsSend({ type: "state", call: "live", round: 1, phase: "wrapup", repeat: true, returning: true, card: { name: "Sam" } }); await t.clock.advance(300);
     ck("I no wrap-up scroll on a repeat call", !t.scrolls.some((s) => s.startsWith("both")) && !t.anyGlow(), t.scrolls);
     t.wsSend({ type: "state", call: "ended", round: 1, phase: null, repeat: true, returning: true, card: { name: "Sam", issue: "No heat" } }); await t.clock.advance(300);
