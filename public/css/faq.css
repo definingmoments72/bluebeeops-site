@@ -1,0 +1,42 @@
+/* /faq/ page. Loaded after /css/home.css and reuses its tokens, header, buttons, glass cards, FAQ accordion and footer. */
+.faq-narrow { max-width:50rem; }
+.site-nav a[aria-current="page"] { color:#fff; }
+.site-nav a[aria-current="page"]::after { transform:scaleX(1); }
+
+.faq-hero { padding:3rem 0 1.5rem; overflow:hidden; }
+.faq-hero-glow { position:absolute; left:50%; top:-22rem; width:60rem; height:40rem; margin-left:-30rem; border-radius:50%; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(43,84,212,.45), rgba(43,84,212,.1) 55%, transparent); }
+.faq-hero .container { position:relative; }
+.faq-hero h1 { font-size:clamp(2.3rem, 1.5rem + 4vw, 4rem); font-weight:800; letter-spacing:-.04em; line-height:1.05; margin-bottom:1.75rem;
+  background:linear-gradient(180deg, #fff 30%, #b9c6e8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+.faq-toc ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.5rem; }
+.faq-toc a { display:inline-flex; align-items:center; min-height:2.5rem; padding:.4rem .95rem; border-radius:999px; font-size:.9rem; font-weight:600;
+  color:#c9d3ea; text-decoration:none; border:1px solid rgba(160,185,255,.18); background:rgba(255,255,255,.03); transition:border-color .2s, color .2s; }
+.faq-toc a:hover { color:var(--gold-2); border-color:var(--gold-line); }
+
+.faq-part { padding:2.5rem 0; }
+.faq-part + .faq-part { border-top:1px solid rgba(160,185,255,.08); }
+.faq-part h2 { font-size:clamp(1.7rem, 1.25rem + 2vw, 2.5rem); }
+.faq-part-intro { margin:1rem 0 0; color:var(--muted); max-width:44rem; }
+.faq-section { padding:0; margin-top:2.25rem; scroll-margin-top:5.5rem; }
+.faq-section h3 { display:flex; align-items:center; gap:.7rem; margin-bottom:1rem; font-size:.8rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); }
+.faq-section h3::after { content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--gold-line), transparent); }
+.faq details { scroll-margin-top:5.5rem; }
+.faq summary { min-height:3rem; }
+.faq summary:focus-visible { outline-offset:-2px; }
+.faq details > .faq-answer p { margin:0 0 .75rem; }
+.faq details > .faq-answer > :last-child { margin-bottom:0; }
+.faq-answer .faq-example { max-width:22rem; margin:0 0 .75rem; }
+.faq-answer .faq-example p { margin:0 0 .15rem; color:#fff; }
+
+.faq-cta { display:flex; flex-direction:column; align-items:center; gap:1rem; }
+.faq-cta .btn-xl { text-align:center; text-wrap:balance; }
+
+@media (min-width: 40rem) {
+  .faq-hero { padding:4.5rem 0 2rem; }
+  .faq-cta { flex-direction:row; flex-wrap:wrap; justify-content:center; }
+}
+@media (min-width: 56rem) {
+  .faq-part { padding:3.5rem 0; }
+}
