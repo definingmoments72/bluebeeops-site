@@ -127,6 +127,7 @@
           <div class="field" data-field="issue"><dt>Issue</dt><dd>&mdash;</dd></div>
           <div class="field" data-field="city"><dt>City/ZIP</dt><dd>&mdash;</dd></div>
           <div class="field" data-field="urgency"><dt>Urgency</dt><dd>&mdash;</dd></div>
+          <div class="field" data-field="mood"><dt>Caller mood</dt><dd>&mdash;</dd></div>
           <div class="field" data-field="window" data-pkg="intake" hidden><dt>Estimate window</dt><dd>&mdash;</dd></div>
           <div class="field" data-field="appointment" data-pkg="estimate" hidden><dt>Estimate booked</dt><dd>&mdash;</dd></div>
         </dl>
@@ -151,6 +152,7 @@
             <p><span class="k">Urgency:</span> <span class="v blank" data-sms="urgency">&mdash;</span></p>
             <p data-pkg="intake" hidden><span class="k">Wants an estimate:</span> <span class="v blank" data-sms="window">&mdash;</span></p>
             <p data-pkg="estimate" hidden><span class="k">Estimate booked:</span> <span class="v blank" data-sms="appointment">&mdash;</span></p>
+            <p><span class="k">Mood:</span> <span class="v blank" data-sms="mood">&mdash;</span></p>
             <p class="sms-urgent" id="sms-urgent" hidden>Urgent: on a live line, this caller is put straight through to you.</p>
             <p><span class="k">Tap to call back:</span> <span class="v blank" data-sms="tap">&mdash;</span></p>
             <p class="sms-actions" data-pkg="intake" hidden><span class="sms-tap">Tap to confirm this time</span></p>
@@ -160,6 +162,49 @@
       </section>
       </div>
     </div>
+
+    <section class="panel glass daily" id="daily" aria-labelledby="daily-h">
+      <div class="card-head">
+        <h2 id="daily-h">The daily report Dave gets</h2>
+        <span class="tag-preview">Example daily report</span>
+      </div>
+      <p class="muted small">At the end of each day, Blue Bee Ops sends the owner a summary of every call it answered. The calls below are sample data. When you call, yours shows up at the top.</p>
+      <div class="dr-sheet">
+        <p class="dr-title">Harborline Heating &amp; Air &middot; Today's calls</p>
+        <dl class="dr-stats">
+          <div><dt>Calls answered</dt><dd id="dr-answered">4</dd></div>
+          <div><dt>Urgent</dt><dd id="dr-urgent">2</dd></div>
+          <div><dt>Need a callback</dt><dd id="dr-open">1</dd></div>
+        </dl>
+        <ol class="dr-list" id="dr-list">
+            <li class="dr-item">
+              <div class="dr-top"><span class="dr-time">7:42 AM</span><span class="dr-name">Linda Park</span><span class="dr-tag urgent">Urgent</span></div>
+              <p class="dr-issue">No heat, furnace clicking but not lighting</p>
+              <p class="dr-meta"><span class="k">Mood:</span> Stressed, cold house with two kids</p>
+              <p class="dr-meta"><span class="k">Callback:</span> Called back 8:05 AM</p>
+            </li>
+            <li class="dr-item">
+              <div class="dr-top"><span class="dr-time">11:18 AM</span><span class="dr-name">Mike Torres</span></div>
+              <p class="dr-issue">Wants an estimate on a heat pump</p>
+              <p class="dr-meta"><span class="k">Mood:</span> Calm, comparing a few quotes</p>
+              <p class="dr-meta"><span class="k">Callback:</span> Called back 1:30 PM</p>
+            </li>
+            <li class="dr-item">
+              <div class="dr-top"><span class="dr-time">12:47 PM</span><span class="dr-name">Janet Ruiz</span></div>
+              <p class="dr-issue">Thermostat blank after a power outage</p>
+              <p class="dr-meta"><span class="k">Mood:</span> Friendly, a little annoyed</p>
+              <p class="dr-meta"><span class="k">Callback:</span> Called back 2:15 PM</p>
+            </li>
+            <li class="dr-item">
+              <div class="dr-top"><span class="dr-time">6:20 PM</span><span class="dr-name">Greg Olsen</span><span class="dr-tag urgent">Urgent</span><span class="dr-tag">After hours</span></div>
+              <p class="dr-issue">Burning smell from the vents when the heat runs</p>
+              <p class="dr-meta"><span class="k">Mood:</span> Worried, wants someone soon</p>
+              <p class="dr-meta"><span class="k">Callback:</span> Needs a callback</p>
+            </li>
+        </ol>
+      </div>
+      <p class="sms-caption">Example report with sample calls. Nothing is sent from this demo.</p>
+    </section>
 
     <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls are limited to about 2&frac12; minutes and 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
   </main>

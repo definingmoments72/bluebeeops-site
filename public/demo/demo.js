@@ -99,7 +99,7 @@
     var pkg = cardPkg(m);
     showPkgRows(pkg);
     // "city" row shows City/ZIP together: card.city and card.zip (5 digits) from capture_update.
-    ["name", "callback", "issue", "city", "urgency", "window", "appointment"].forEach(function (f) {
+    ["name", "callback", "issue", "city", "urgency", "mood", "window", "appointment"].forEach(function (f) {
       var el = document.querySelector('.field[data-field="' + f + '"]');
       var dd = el.querySelector("dd");
       var v = f === "city"
@@ -114,6 +114,7 @@
       if (f === "urgency") dd.className = v === "emergency" ? "urgency-emergency" : "";
     });
     renderOwnerText(card, pkg);
+    renderDaily(card, pkg);
     // Tell the Worker the confirmed callback is on screen (latency measurement, AC3).
     if (card.callback && card.callback !== ackedCallback && ws && ws.readyState === 1) {
       ackedCallback = card.callback;
@@ -136,7 +137,8 @@
       urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
       tap: card.callback ? String(card.callback) : "",
       window: pkg === "intake" && card.window ? String(card.window) : "",
-      appointment: pkg === "estimate" && card.appointment ? String(card.appointment) : ""
+      appointment: pkg === "estimate" && card.appointment ? String(card.appointment) : "",
+      mood: card.mood ? String(card.mood) : ""
     };
     var urgentPutThrough = pkg === "estimate" && urg === "emergency";
     $("sms-urgent").hidden = !urgentPutThrough;
@@ -155,6 +157,41 @@
       }
     });
     $("sms-bubble").classList.toggle("is-empty", !any);
+  }
+
+  // ---------- Example daily report: sample calls + this visitor's call on top (textContent only) ----------
+  var DR_BASE = { answered: 4, urgent: 2, open: 1 };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function renderDaily(card, pkg) {
+    var list = $("dr-list"), mine = $("dr-mine");
+    var has = !!(card.name || card.issue);
+    if (!has) {
+      if (mine) mine.parentNode.removeChild(mine);
+      $("dr-answered").textContent = DR_BASE.answered; $("dr-urgent").textContent = DR_BASE.urgent; $("dr-open").textContent = DR_BASE.open;
+      return;
+    }
+    var urgent = String(card.urgency || "") === "emergency";
+    var li = el("li", "dr-item dr-mine fresh");
+    li.id = "dr-mine";
+    var top = el("div", "dr-top");
+    top.appendChild(el("span", "dr-time", "Just now"));
+    top.appendChild(el("span", "dr-name", card.name ? String(card.name) : "Your call"));
+    top.appendChild(el("span", "dr-tag yours", "Your call"));
+    if (urgent) top.appendChild(el("span", "dr-tag urgent", "Urgent"));
+    li.appendChild(top);
+    li.appendChild(el("p", "dr-issue", card.issue ? String(card.issue) : "\u2014"));
+    function meta(k, v) { var p = el("p", "dr-meta"); p.appendChild(el("span", "k", k + " ")); p.appendChild(document.createTextNode(v)); li.appendChild(p); }
+    meta("Mood:", card.mood ? String(card.mood) : "\u2014");
+    if (pkg === "intake" && card.window) meta("Wants an estimate:", String(card.window) + " (Dave to confirm)");
+    if (pkg === "estimate" && card.appointment) meta("Estimate booked:", String(card.appointment) + " (demo)");
+    meta("Callback:", "Needs a callback" + (card.callback ? " \u00b7 " + String(card.callback) : ""));
+    var sig = li.textContent;
+    if (mine && mine.getAttribute("data-sig") === sig) return;
+    li.setAttribute("data-sig", sig);
+    if (mine) list.replaceChild(li, mine); else list.insertBefore(li, list.firstChild);
+    $("dr-answered").textContent = DR_BASE.answered + 1;
+    $("dr-urgent").textContent = DR_BASE.urgent + (urgent ? 1 : 0);
+    $("dr-open").textContent = DR_BASE.open + 1;
   }
 
   function applyPkgUi() {
