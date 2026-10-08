@@ -316,6 +316,10 @@ HOME_STYLE = """
     .plan.featured li::before { background-color:var(--gold); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2306122f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E"); }
     .plan.featured :focus-visible { outline-color:var(--gold); }
     .plans-note { margin:1.75rem 0 0; color:var(--muted); max-width:44rem; }
+    .plan-tags { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1rem; }
+    .plan-tags .tag { margin-bottom:0; }
+    .plan .tag-soon { background:var(--gold); color:var(--navy-2); }
+    .btn.is-disabled, .btn.is-disabled:hover { color:var(--silver-ink); background:transparent; border:1px dashed #c3c9d6; cursor:default; box-shadow:none; transform:none; }
 
     /* About */
     .about .container { display:grid; gap:2rem; align-items:center; }
@@ -422,7 +426,7 @@ PACKAGES = [
         "cta": ("Call us about Coverage", TEL, "btn-gold"),
     },
     {
-        "name": "Intake Service", "tag": "A step up", "featured": False,
+        "name": "Intake Service", "tag": "A step up", "featured": False, "soon": True,
         "price": "$249", "setup": None,
         "summary": "For shops that want more of the conversation handled before they call back.",
         "includes": "Everything in Coverage Service, plus:",
@@ -433,10 +437,10 @@ PACKAGES = [
             "Lets the caller pick an estimate window, which you confirm with one tap",
         ],
         "fine": None,
-        "cta": ("Ask about Intake", f"{MAILTO}?subject=Intake%20Service", "btn-secondary"),
+        "cta": ("Intake: coming soon", None, "btn-secondary"),
     },
     {
-        "name": "Estimate Request Service", "tag": "Top tier", "featured": False,
+        "name": "Estimate Request Service", "tag": "Top tier", "featured": False, "soon": True,
         "price": "$349", "setup": "plus $300 to $500 setup",
         "summary": "For shops that want estimates on the calendar before the caller hangs up.",
         "includes": "Everything in Intake Service, plus:",
@@ -445,7 +449,7 @@ PACKAGES = [
             "Puts urgent calls straight through to you",
         ],
         "fine": "Putting urgent calls through isn't an emergency or dispatch service.",
-        "cta": ("Ask about Estimate Request", f"{MAILTO}?subject=Estimate%20Request%20Service", "btn-secondary"),
+        "cta": ("Estimate Request: coming soon", None, "btn-secondary"),
     },
 ]
 
@@ -457,15 +461,21 @@ def plan_card(p):
     items = "\n".join(f"            <li>{i}</li>" for i in p["items"])
     fine = f'\n          <p class="fine">{p["fine"]}</p>' if p["fine"] else ""
     label, href, btn = p["cta"]
-    return f"""        <article class="{cls}" aria-labelledby="{hid}">
-          <span class="tag">{p["tag"]}</span>
+    # Packages that aren't live yet: a "Coming soon" pill and a button with no href (not a link, not focusable).
+    soon = p.get("soon")
+    tags = (f'<div class="plan-tags"><span class="tag">{p["tag"]}</span><span class="tag tag-soon">Coming soon</span></div>'
+            if soon else f'<span class="tag">{p["tag"]}</span>')
+    cta = (f'<a class="btn {btn} is-disabled" aria-disabled="true">{label}</a>' if soon or not href
+           else f'<a class="btn {btn}" href="{href}">{label}</a>')
+    return f"""        <article class="{cls}{' plan-soon' if soon else ''}" aria-labelledby="{hid}">
+          {tags}
           <h3 id="{hid}">{p["name"]}</h3>
           <p class="summary">{p["summary"]}</p>
           <p class="price"><span class="amt">{p["price"]}</span><span class="per">a month</span></p>{setup}{includes}
           <ul>
 {items}
           </ul>{fine}
-          <a class="btn {btn}" href="{href}">{label}</a>
+          {cta}
         </article>"""
 
 def picture(stem, sizes, alt, w, h, cls="", lazy=False, slot=None):
