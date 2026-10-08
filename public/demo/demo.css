@@ -264,5 +264,24 @@ html.pkg-auto-out .bbl-stage { transform:scale(1.06); }
 }
 
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
+.fine p { margin:0; }
+.fine p + p { margin-top:.6rem; }
+
+/* "Hear the full walkthrough on my next call" (only when the lease says repeat-caller memory is on) */
+.fresh { margin:0 0 1.1rem; }
+.fresh-opt { display:flex; align-items:flex-start; gap:.6rem; cursor:pointer; font-weight:650; line-height:1.4; }
+.fresh-opt input { flex:none; width:1.15rem; height:1.15rem; margin:.12rem 0 0; accent-color:var(--gold); cursor:pointer; }
+.fresh-hint { margin:.3rem 0 0 1.75rem; }
+.sw-memory { max-width:40rem; margin-top:.9rem; }
+.sw-memory #next-memory { margin:0 0 .8rem; }
+.sw-memory .fresh { margin:0; }
+
+/* Narrator wrap-up: a single soft glow on both texts when the narrator asks the caller to look back at the screen */
+@keyframes wrapup-glow {
+  0% { box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 2px rgba(241,211,145,.85), 0 0 34px 4px rgba(217,180,106,.45), 0 30px 60px -30px rgba(43,84,212,.6); }
+  100% { box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(217,180,106,.14), 0 0 34px 4px rgba(217,180,106,0), 0 30px 60px -30px rgba(43,84,212,.6); }
+}
+.sms-phone.wrapup-glow { animation:wrapup-glow 2.5s ease-out 1; }
 
 @media (prefers-reduced-motion:reduce) { .live-dot, .sms-bubble .v.fresh, .caller-bubble p.fresh { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .sms-phone.wrapup-glow { box-shadow:0 0 0 2px rgba(241,211,145,.7); } }

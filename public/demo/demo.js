@@ -65,6 +65,37 @@
   function gettingMsg() { return "Getting your " + PKGS[chosenPkg].name + " demo line\u2026"; }
   var lastMsg = null; // last card state from the Worker, re-rendered when the picker changes
 
+  // /lease features (2026-10-08): narrator wrap-up, repeat-caller memory, call length. A Worker without them
+  // gives today's page: 5-minute calls, no wrap-up, no memory copy and no walkthrough toggle.
+  var NO_FEATURES = { wrapup: false, memory: false, maxCallSeconds: 300, memoryDays: 0 };
+  var features = null; // null until a lease arrives: the static footer stays as it is
+  function parseFeatures(f) {
+    if (!f || typeof f !== "object") return NO_FEATURES;
+    var wrapup = f.wrapup === true, memory = f.memory === true;
+    var max = typeof f.maxCallSeconds === "number" && f.maxCallSeconds >= 60 && f.maxCallSeconds <= 3600 ? f.maxCallSeconds : wrapup ? 480 : 300;
+    var days = typeof f.memoryDays === "number" && f.memoryDays >= 1 && f.memoryDays <= 365 ? Math.round(f.memoryDays) : memory ? 30 : 0;
+    return { wrapup: wrapup, memory: memory, maxCallSeconds: max, memoryDays: days };
+  }
+  function memoryOn() { return !!(features && features.memory); }
+  function fineText(f) {
+    f = f || NO_FEATURES;
+    var wiped = " Call details are wiped after about a day";
+    var s = "Harborline Heating & Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls." +
+      " Calls last up to " + Math.round(f.maxCallSeconds / 60) + " minutes, with a limit of 3 calls per phone per day.";
+    s += f.memory ? wiped + ", except a short note that lets the line greet you as a returning caller: what your last demo call was about and, only if you choose to give it at the end of the call, your name." +
+      " That note is kept for " + f.memoryDays + " days after your last demo call, then deleted." : wiped + ".";
+    if (f.wrapup) s += " If you ask to have a question passed along at the end of the call, your question and the number you called from are emailed to the Blue Bee Ops team so someone can call you back.";
+    return s;
+  }
+  function applyFeatures() {
+    if (!features) return;
+    $("fine-text").textContent = fineText(features);
+    $("memory-note").hidden = !features.memory;
+    var boxes = document.querySelectorAll("[data-fresh]");
+    for (var i = 0; i < boxes.length; i++) boxes[i].hidden = !features.memory;
+    applySwitcher();
+  }
+
   function $(id) { return document.getElementById(id); }
   // Leaves the ?package= loading state (html.pkg-auto, set by the inline head script): number shown or fallback.
   // The overlay fades out (html.pkg-auto-out); it is never held past AUTO_MIN_MS after page start.
@@ -158,7 +189,8 @@
   // ---------- Call card -> Dave's text preview ----------
   var STATUS = { idle: "Both texts fill in live during your call.", connecting: "Call coming in\u2026 Both texts fill in as you talk.",
     live: "On the call. Watch both texts fill in as you talk.",
-    ended: "Your call ended. These are the texts Dave and the caller would get, and your call is now at the top of Dave's end-of-day report below." };
+    ended: "Your call ended. These are the texts Dave and the caller would get, and your call is now at the top of Dave's end-of-day report below.",
+    wrapup: "Behind the scenes: here's what Dave got.", repeat: "Welcome back. This time it's just the live call." };
   var CARD_FIELDS = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"];
   function cardHasData(card) { return CARD_FIELDS.some(function (f) { return !!card[f]; }); }
   // The package the card shows: the call's own package once a call has started, else the page's pick.
@@ -170,14 +202,23 @@
     note.textContent = PKGS[pkg].note;
     note.hidden = !PKGS[pkg].note;
   }
-  function render(m) {
+  // firstState: the first state this lease's socket delivered (a cached state on load), never a live change.
+  function render(m, firstState) {
     if (typeof m.seq === "number" && m.seq <= lastSeq) return;
     if (typeof m.seq === "number") lastSeq = m.seq;
     lastMsg = m;
     if (m.call !== "connecting" && m.call !== "live") $("pkg-next").hidden = true;
-    var prevState = callState;
+    var prevState = callState, wasInCall = inCall();
     if ((m.call || "idle") !== callState) { idleSince = Date.now(); idleVerifiedAt = 0; }
     callState = m.call || "idle";
+    var round = typeof m.round === "number" ? m.round : null;
+    if (inCall() && (round !== callRound || !wasInCall)) newCallStarted();
+    if (inCall()) { callRound = round; callRepeat = memoryOn() && m.repeat === true; }
+    callPhase = typeof m.phase === "string" ? m.phase : null;
+    if (callState === "ended" && prevState !== "ended") {
+      callEndedAt = typeof m.serverAt === "number" && firstState ? m.serverAt : Date.now();
+      if (typeof m.repeat === "boolean") callRepeat = memoryOn() && m.repeat;
+    }
     var card = m.card || {};
     var pkg = cardPkg(m);
     // A real call state (or a fresh end after the tap) replaces the optimistic "you just dialed" live view.
@@ -194,6 +235,7 @@
       ws.send(JSON.stringify({ type: "ack", field: "callback", seq: m.seq }));
     }
     if (callState === "ended" && prevState !== "ended") callEnded();
+    checkWrapup(firstState);
   }
 
   // ---------- Results once a call ends ----------
@@ -204,28 +246,85 @@
   function renderResults(m, card) {
     var ended = callState === "ended";
     var caught = lastCaught = cardHasData(card);
+    var during = inCall() && callRepeat ? STATUS.repeat
+      : callState === "live" && callPhase === "wrapup" ? STATUS.wrapup : STATUS[callState] || "";
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") +
-      (!ended ? STATUS[callState] || "" : caught ? STATUS.ended
+      (!ended ? during : caught ? STATUS.ended
         : "Harborline didn't catch any details that time. Call again and describe a heating or cooling problem.");
     var mood = ended && card.mood ? String(card.mood) : "";
     $("mood-note-v").textContent = mood;
     $("mood-note").hidden = !mood;
   }
   function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-  function scrollToText() {
-    awayForCall = false;
-    endedWhileAway = false;
+  // both: bring Dave's text AND the caller text into view (narrator wrap-up). On a short phone screen where the
+  // whole panel doesn't fit, start at Dave's phone mockup instead of the panel heading so both phones fit if they can.
+  function scrollToText(both) {
+    if (!both) { awayForCall = false; endedWhileAway = false; }
     var target = $("owner-text");
     // Let layout settle first (iOS restores its own scroll position when the page comes back).
     setTimeout(function () {
-      try { target.scrollIntoView({ behavior: reduceMotion() ? "instant" : "smooth", block: "start" }); }
+      var behavior = reduceMotion() ? "instant" : "smooth";
+      if (both && bothTextsScroll(target, behavior)) return;
+      try { target.scrollIntoView({ behavior: behavior, block: "start" }); }
       catch (e) { target.scrollIntoView(true); }
     }, 120);
   }
+  function bothTextsScroll(panel, behavior) {
+    try {
+      var callerCard = $("caller-msg").closest(".sms-phone"), davePhone = document.querySelector("#dave-side .sms-phone");
+      if (!callerCard || !davePhone || typeof window.scrollTo !== "function") return false;
+      var offset = parseFloat(window.getComputedStyle(panel).scrollMarginTop) || 0;
+      var room = window.innerHeight - offset, bottom = callerCard.getBoundingClientRect().bottom + 12;
+      var top = panel.getBoundingClientRect().top;
+      if (bottom - top > room) top = davePhone.getBoundingClientRect().top - 8;
+      window.scrollTo({ top: Math.max(0, window.scrollY + top - offset), behavior: behavior });
+      return true;
+    } catch (e) { return false; }
+  }
   function callEnded() {
-    if (!firstCallEnded) { firstCallEnded = true; applySwitcher(); }
+    wrapupPending = false;
+    if (!firstCallEnded) firstCallEnded = true;
+    applySwitcher();
     if (document.visibilityState === "visible") scrollToText();
     else { awayForCall = true; endedWhileAway = true; }
+  }
+
+  // ---------- Narrator wrap-up (two-voice calls): bring both texts into view once, with a soft glow ----------
+  // Fires when a live state shows phase "wrapup" for a call (round) that hadn't been in the wrap-up yet. Never from
+  // the first state a lease's page sees (a cached state on load). If the page is hidden at that moment (the caller is
+  // in the phone app), it waits for the page to come back while the wrap-up is still going.
+  var sawState = false, callRound = null, callPhase = null, callRepeat = false, callEndedAt = 0;
+  var wrapupRound = null, wrapupPending = false, glowTimer = null;
+  function inWrapup() { return callState === "live" && callPhase === "wrapup"; }
+  function checkWrapup(firstState) {
+    if (!inWrapup() || callRepeat) return;
+    var key = callRound === null ? "?" : callRound;
+    if (wrapupRound === key) return;
+    wrapupRound = key;
+    if (firstState) return;
+    if (document.visibilityState === "visible") showWrapup();
+    else wrapupPending = true;
+  }
+  function showWrapup() {
+    wrapupPending = false;
+    scrollToText(true);
+    var cards = [document.querySelector("#dave-side .sms-phone"), $("caller-msg").closest(".sms-phone")];
+    clearTimeout(glowTimer);
+    function done() { clearTimeout(glowTimer); for (var i = 0; i < cards.length; i++) if (cards[i]) cards[i].classList.remove("wrapup-glow"); }
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      if (!c) continue;
+      c.classList.remove("wrapup-glow"); void c.offsetWidth; c.classList.add("wrapup-glow");
+      c.addEventListener("animationend", done, { once: true });
+    }
+    // reduced motion (no animation, so no animationend) or an interrupted animation
+    glowTimer = setTimeout(done, 2700);
+  }
+  // A new call started on this lease (new round): the one-shot walkthrough choice has been used by the Worker.
+  function newCallStarted() {
+    callRepeat = false;
+    wrapupPending = false;
+    setFresh(false, true);
   }
 
   // ---------- Page flow: before the call / live call / after the call ----------
@@ -340,7 +439,8 @@
     assumeCallAfterTap();
     var wasLive = flow === "live";
     applyFlow();
-    if (flow === "live" && wasLive && !notSeenNow()) scrollToText();
+    if (wrapupPending && inWrapup()) showWrapup();
+    else if (flow === "live" && wasLive && !notSeenNow()) scrollToText();
     returnCheckPending = true;
     clearTimeout(returnCheckTimer);
     returnCheckTimer = setTimeout(checkReturn, 4000);
@@ -518,8 +618,31 @@
     t = cutWords(t, max);
     return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
   }
-  function callerText(card, pkg) {
+  // When Dave calls back, from the demo shop's hours (Mon-Fri 8 AM to 5 PM, America/Los_Angeles):
+  // "soon" in hours, "morning" on a weekday evening or early morning, "monday" from Friday 5 PM through Sunday.
+  // Monday before 8 AM is "morning" (it already is Monday). No Intl time zone support: "soon" (the old line).
+  var PT_PARTS = null;
+  function callbackTiming(at) {
+    try {
+      PT_PARTS = PT_PARTS || new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", weekday: "short", hour: "numeric", hourCycle: "h23" });
+      var day = "", hour = -1, parts = PT_PARTS.formatToParts(typeof at === "number" ? at : Date.now());
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type === "weekday") day = parts[i].value;
+        if (parts[i].type === "hour") hour = parseInt(parts[i].value, 10) % 24;
+      }
+      var d = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day);
+      if (d < 0 || !(hour >= 0)) return "soon";
+      if (d === 0 || d === 6 || (d === 5 && hour >= 17)) return "monday";
+      if (hour < 8 || hour >= 17) return "morning";
+      return "soon";
+    } catch (e) { return "soon"; }
+  }
+  var CALLBACK_LINE = { soon: "he'll call you back as soon as he's off the job.", morning: "he'll give you a call back first thing in the morning.",
+    monday: "he'll give you a call back first thing Monday morning." };
+  // at: when the call ended (or now while it's live); defaults to now.
+  function callerText(card, pkg, at) {
     card = card || {}; pkg = pkg || "coverage";
+    var back = CALLBACK_LINE[callbackTiming(at)];
     var first = callerFirstName(card), summary = callerSummary(card), offTopic = !!(summary && card.offTopic === true);
     var win = pkg === "intake" ? gsmField(cleanField(card.window, CAP.window)) : "";
     var appt = pkg === "estimate" ? gsmField(cleanField(card.appointment, CAP.appointment)) : "";
@@ -527,8 +650,8 @@
     var hi = "Hi " + (first || "there") + ", thanks for calling Harborline Heating & Air.";
     var next = win ? " You asked for " + win + " for an estimate, and Dave will confirm the time when he calls you back."
       : appt ? " You asked for " + appt + ", and Dave will confirm that time with you."
-      : offTopic ? " Heating and air is what we do, but he'll call you back as soon as he's off the job."
-      : " He'll call you back as soon as he's off the job.";
+      : offTopic ? " Heating and air is what we do, but " + back
+      : " H" + back.slice(1);
     var tail = "";
     if (emergency) {
       tail = SAFETY.test(String(card.issue || "") + " " + summary) ? " If you smell gas or a CO alarm is going off, leave the house now and call 911."
@@ -552,9 +675,11 @@
   }
   // Pure helpers, exposed for tools/test_demo_text.js.
   window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, scrubField: scrubField, callerText: callerText,
-    dropCallbackClauses: dropCallbackClauses, daveIssue: daveIssue, issueFragment: issueFragment, toGsm: toGsm, isGsm: isGsm, CALLER_TEXT_MAX: CALLER_TEXT_MAX };
+    dropCallbackClauses: dropCallbackClauses, daveIssue: daveIssue, issueFragment: issueFragment, toGsm: toGsm, isGsm: isGsm, CALLER_TEXT_MAX: CALLER_TEXT_MAX,
+    callbackTiming: callbackTiming, fineText: fineText, parseFeatures: parseFeatures };
   function renderCallerText(card, pkg) {
-    var p = $("caller-msg"), msg = callerText(card, pkg || "coverage");
+    var at = !inCall() && callEndedAt ? callEndedAt : Date.now();
+    var p = $("caller-msg"), msg = callerText(card, pkg || "coverage", at);
     if (p.textContent === msg) return;
     p.textContent = msg;
     var any = !!(card.name || card.issue || card.window || card.appointment);
@@ -617,6 +742,8 @@
   // Hidden until the visitor's first call on a held number has ended.
   function applySwitcher() {
     $("switcher").hidden = !(lease && firstCallEnded);
+    $("sw-memory").hidden = !memoryOn();
+    $("next-memory").hidden = !(memoryOn() && firstCallEnded && !inCall() && !callRepeat);
     var opts = document.querySelectorAll("#switcher [data-pkg-switch]");
     for (var i = 0; i < opts.length; i++) {
       var on = opts[i].getAttribute("data-pkg-switch") === chosenPkg;
@@ -650,6 +777,48 @@
     }
   }
 
+  // ---------- "Hear the full walkthrough on my next call" (repeat-caller memory only) ----------
+  // One-shot on the Worker: the next call to this lease's number ignores memory, then the flag clears itself.
+  // Not persisted. Both checkboxes show one state; posts are spaced about a second apart (shared heartbeat limiter).
+  var FRESH_GAP_MS = 1100;
+  var freshWant = false, freshServer = false, freshBusy = false, freshLastAt = 0, freshTimer = null, freshReq = 0;
+  function setFreshUi(v) {
+    var boxes = document.querySelectorAll("[data-fresh-box]");
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = !!v;
+  }
+  // used: the Worker already used (or cleared) the choice, so drop it locally without posting
+  function setFresh(v, used) {
+    freshWant = !!v;
+    if (used) { freshServer = freshWant; clearTimeout(freshTimer); freshTimer = null; }
+    setFreshUi(freshWant);
+  }
+  function onFreshChange(ev) {
+    if (!lease || !memoryOn()) { setFresh(false, true); return; }
+    setFresh(ev.currentTarget.checked);
+    sendFresh();
+  }
+  function sendFresh() {
+    clearTimeout(freshTimer); freshTimer = null;
+    if (!lease || freshBusy || freshWant === freshServer) return;
+    var wait = freshLastAt + FRESH_GAP_MS - Date.now();
+    if (wait > 0) { freshTimer = setTimeout(sendFresh, wait); return; }
+    var mine = lease, want = freshWant, id = ++freshReq;
+    freshBusy = true; freshLastAt = Date.now();
+    function failed(why) {
+      if (typeof console !== "undefined") console.log("demo: walkthrough choice not saved (" + why + ")");
+      if (lease !== mine || id !== freshReq) return;
+      setFresh(freshServer, true);
+    }
+    post("/lease/fresh", { sessionId: mine.sessionId, sessionToken: mine.sessionToken, fresh: want }).then(function (r) {
+      if (r._status === 200 && r.ok) { if (lease === mine && id === freshReq) freshServer = typeof r.fresh === "boolean" ? r.fresh : want; }
+      else failed(r._status + (r.reason ? " " + r.reason : ""));
+    }, function () { failed("network"); }).then(function () {
+      if (id !== freshReq) return;
+      freshBusy = false;
+      sendFresh();
+    });
+  }
+
   // ---------- WebSocket ----------
   var wsStateReady = false;
   function connectWs() {
@@ -666,7 +835,9 @@
       if (m.type === "hello" || m.type === "state") {
         var firstFreshState = !wsStateReady;
         wsStateReady = true;
-        render(m);
+        var firstOnLease = !sawState;
+        sawState = true;
+        render(m, firstOnLease);
         if (callState !== "connecting" && callState !== "live") idleVerifiedAt = Date.now();
         if (firstFreshState && heartbeatQueued) { heartbeatQueued = false; heartbeat(); }
         if (firstFreshState) checkReturn();
@@ -766,7 +937,12 @@
     pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0; callNotSeen = false; tapPending = false; backSent = false;
     returnCheckPending = false; clearTimeout(returnCheckTimer); returnCheckTimer = null;
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
+    features = parseFeatures(r.features);
+    callRound = null; callPhase = null; callRepeat = false; callEndedAt = 0; wrapupRound = null; wrapupPending = false;
+    freshReq++; freshBusy = false; freshLastAt = 0; setFresh(false, true);
+    applyFeatures();
     // A replacement lease must not briefly reuse the prior session's results or reveal its switcher.
+    sawState = false;
     render({ call: "idle", card: {} });
     idleSince = Date.now(); idleVerifiedAt = 0;
     lastHeartbeatCheck = idleSince;
@@ -785,6 +961,7 @@
     if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
     pendingCallUntil = 0; clearTimeout(pendingTimer); callNotSeen = false; tapPending = false;
+    freshReq++; freshBusy = false; setFresh(false, true);
     applyPkgUi();
     applyFlow({});
   }
@@ -992,6 +1169,8 @@
     $("call-link").addEventListener("click", noteCallTap);
     $("sw-call").addEventListener("click", noteCallTap);
     $("live-again").addEventListener("click", noteCallTap);
+    var freshBoxes = document.querySelectorAll("[data-fresh-box]");
+    for (var f = 0; f < freshBoxes.length; f++) freshBoxes[f].addEventListener("change", onFreshChange);
     var swBtns = document.querySelectorAll("#switcher [data-pkg-switch]");
     for (var k = 0; k < swBtns.length; k++) swBtns[k].addEventListener("click", function (ev) { switchPkg(ev.currentTarget.getAttribute("data-pkg-switch")); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
