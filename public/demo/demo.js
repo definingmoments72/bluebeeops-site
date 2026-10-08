@@ -67,14 +67,15 @@
 
   // /lease features (2026-10-08): narrator wrap-up, repeat-caller memory, call length. A Worker without them
   // gives today's page: 5-minute calls, no wrap-up, no memory copy and no walkthrough toggle.
-  var NO_FEATURES = { wrapup: false, memory: false, maxCallSeconds: 300, memoryDays: 0 };
+  var NO_FEATURES = { wrapup: false, memory: false, maxCallSeconds: 300, memoryDays: 0, memoryHours: 0 };
   var features = null; // null until a lease arrives: the static footer stays as it is
   function parseFeatures(f) {
     if (!f || typeof f !== "object") return NO_FEATURES;
     var wrapup = f.wrapup === true, memory = f.memory === true;
     var max = typeof f.maxCallSeconds === "number" && f.maxCallSeconds >= 60 && f.maxCallSeconds <= 3600 ? f.maxCallSeconds : wrapup ? 480 : 300;
-    var days = typeof f.memoryDays === "number" && f.memoryDays >= 1 && f.memoryDays <= 365 ? Math.round(f.memoryDays) : memory ? 30 : 0;
-    return { wrapup: wrapup, memory: memory, maxCallSeconds: max, memoryDays: days };
+    var days = typeof f.memoryDays === "number" && f.memoryDays >= 1 && f.memoryDays <= 365 ? Math.round(f.memoryDays) : memory ? 1 : 0;
+    var hours = typeof f.memoryHours === "number" && f.memoryHours >= 1 && f.memoryHours <= 168 ? Math.round(f.memoryHours) : memory ? 24 : 0;
+    return { wrapup: wrapup, memory: memory, maxCallSeconds: max, memoryDays: days, memoryHours: hours };
   }
   function memoryOn() { return !!(features && features.memory); }
   function fineText(f) {
@@ -82,14 +83,16 @@
     var wiped = " Call details are wiped after about a day";
     var s = "Harborline Heating & Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls." +
       " Calls last up to " + Math.round(f.maxCallSeconds / 60) + " minutes, with a limit of 3 calls per phone per day.";
-    s += f.memory ? wiped + ", except a short note that lets the line greet you as a returning caller: what your last demo call was about and, only if you choose to give it at the end of the call, your name." +
-      " That note is kept for " + f.memoryDays + " days after your last demo call, then deleted." : wiped + ".";
+    s += f.memory ? " If you give your name at the end of the call, we remember it and what your call was about for " + f.memoryHours +
+      " hours, so the shop can greet you if you call again. Other call details are wiped after about a day." : wiped + ".";
     if (f.wrapup) s += " If you ask to have a question passed along at the end of the call, your question and the number you called from are emailed to the Blue Bee Ops team so someone can call you back.";
     return s;
   }
   function applyFeatures() {
     if (!features) return;
     $("fine-text").textContent = fineText(features);
+    var hs = document.querySelectorAll("[data-mem-hours]");
+    for (var j = 0; j < hs.length; j++) hs[j].textContent = (features.memoryHours || 24) + " hours";
     $("memory-note").hidden = !features.memory;
     var boxes = document.querySelectorAll("[data-fresh]");
     for (var i = 0; i < boxes.length; i++) boxes[i].hidden = !features.memory;
