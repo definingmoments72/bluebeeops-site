@@ -304,6 +304,8 @@ async function pageTests() {
     ck("E shop status unchanged", /^On the call\./.test(t.status()), t.status());
     t.wsSend({ type: "state", call: "live", round: 1, phase: "wrapup", card: { name: "Sam" } }); await t.clock.advance(5);
     ck("E glow on both cards", t.glowing());
+    t.davePhone._fire("animationend"); // a field's fill-in animation bubbling up (not wrapup-glow)
+    ck("E bubbled child animationend keeps the glow", t.glowing());
     ck("E wrap-up status line", t.status() === "Behind the scenes: here's what Dave got.", t.status());
     await t.clock.advance(200);
     ck("E one scroll to both texts", t.scrolls.length - before === 1 && t.scrolls[t.scrolls.length - 1] === "both:smooth", t.scrolls.slice(before));

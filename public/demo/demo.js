@@ -256,8 +256,9 @@
     $("mood-note").hidden = !mood;
   }
   function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-  // both: bring Dave's text AND the caller text into view (narrator wrap-up). On a short phone screen where the
-  // whole panel doesn't fit, start at Dave's phone mockup instead of the panel heading so both phones fit if they can.
+  // both: bring Dave's text AND the caller text into view (narrator wrap-up). On a phone, where the whole panel is
+  // taller than the screen, start lower (Dave's phone mockup, then his text bubble) until both texts fit; if they
+  // still can't, Dave's whole text shows first, since the narrator recaps it first.
   function scrollToText(both) {
     if (!both) { awayForCall = false; endedWhileAway = false; }
     var target = $("owner-text");
@@ -274,9 +275,12 @@
       var callerCard = $("caller-msg").closest(".sms-phone"), davePhone = document.querySelector("#dave-side .sms-phone");
       if (!callerCard || !davePhone || typeof window.scrollTo !== "function") return false;
       var offset = parseFloat(window.getComputedStyle(panel).scrollMarginTop) || 0;
-      var room = window.innerHeight - offset, bottom = callerCard.getBoundingClientRect().bottom + 12;
-      var top = panel.getBoundingClientRect().top;
-      if (bottom - top > room) top = davePhone.getBoundingClientRect().top - 8;
+      var room = window.innerHeight - offset;
+      var cardBottom = callerCard.getBoundingClientRect().bottom + 12, bubbleBottom = $("caller-bubble").getBoundingClientRect().bottom + 8;
+      var tops = [[panel.getBoundingClientRect().top, cardBottom], [davePhone.getBoundingClientRect().top - 8, cardBottom],
+        [$("sms-bubble").getBoundingClientRect().top - 8, bubbleBottom]];
+      var top = tops[1][0];
+      for (var i = 0; i < tops.length; i++) if (tops[i][1] - tops[i][0] <= room) { top = tops[i][0]; break; }
       window.scrollTo({ top: Math.max(0, window.scrollY + top - offset), behavior: behavior });
       return true;
     } catch (e) { return false; }
@@ -310,12 +314,17 @@
     scrollToText(true);
     var cards = [document.querySelector("#dave-side .sms-phone"), $("caller-msg").closest(".sms-phone")];
     clearTimeout(glowTimer);
-    function done() { clearTimeout(glowTimer); for (var i = 0; i < cards.length; i++) if (cards[i]) cards[i].classList.remove("wrapup-glow"); }
+    function done() {
+      clearTimeout(glowTimer);
+      for (var i = 0; i < cards.length; i++) if (cards[i]) { cards[i].classList.remove("wrapup-glow"); cards[i].removeEventListener("animationend", ended); }
+    }
+    // the fields' own fill-in animations bubble up here too
+    function ended(ev) { if (!ev || (ev.animationName === "wrapup-glow" && cards.indexOf(ev.target) !== -1)) done(); }
     for (var i = 0; i < cards.length; i++) {
       var c = cards[i];
       if (!c) continue;
       c.classList.remove("wrapup-glow"); void c.offsetWidth; c.classList.add("wrapup-glow");
-      c.addEventListener("animationend", done, { once: true });
+      c.addEventListener("animationend", ended);
     }
     // reduced motion (no animation, so no animationend) or an interrupted animation
     glowTimer = setTimeout(done, 2700);
