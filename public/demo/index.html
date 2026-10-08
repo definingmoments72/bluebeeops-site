@@ -13,7 +13,7 @@
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back. -->
-  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
+  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;var a=document.querySelectorAll("[data-pkg-auto-inert]");for(var i=0;i<a.length;i++){a[i].removeAttribute("inert");a[i].removeAttribute("data-pkg-auto-inert");}d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="stylesheet" href="/demo/demo.css">
   <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->

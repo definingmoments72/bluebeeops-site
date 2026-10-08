@@ -144,12 +144,14 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 html[data-autopkg="coverage"] [data-autoload="coverage"],
 html[data-autopkg="intake"] [data-autoload="intake"],
 html[data-autopkg="estimate"] [data-autoload="estimate"] { display:inline; }
+html.pkg-auto, html.pkg-auto body { overflow:hidden; overscroll-behavior:none; }
 html.pkg-auto #start-status, html.pkg-auto #mode-note, html.pkg-auto #start-err,
 html.pkg-auto #pkg-picker, html.pkg-auto #pkg-hint, html.pkg-auto #pkg-next { display:none !important; }
 html.pkg-auto .bbl, html.pkg-auto-out .bbl { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:1.4rem; padding:max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom)); overflow:hidden;
   background:radial-gradient(36rem 30rem at 50% 42%, rgba(43,84,212,.34), rgba(11,23,54,.5) 55%, transparent 80%), var(--bg);
   transition:opacity .3s ease, visibility 0s; }
+html.pkg-auto .bbl { touch-action:none; }
 html.pkg-auto-out .bbl { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .3s ease, visibility 0s .3s; }
 html.pkg-auto-out .bbl-stage { transform:scale(1.06); }
 .bbl-stage { position:relative; width:min(15rem, 70vw); aspect-ratio:1; display:grid; place-items:center; transition:transform .3s var(--ease); }

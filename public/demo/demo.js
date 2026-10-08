@@ -38,12 +38,31 @@
   // Leaves the ?package= loading state (html.pkg-auto, set by the inline head script): number shown or fallback.
   // The overlay fades out (html.pkg-auto-out); it is never held past AUTO_MIN_MS after page start.
   var AUTO_MIN_MS = 400, AUTO_FADE_MS = 350, autoEnding = false;
+  function setAutoInert(on) {
+    if (!document.body) return;
+    var kids = document.body.children;
+    for (var i = 0; i < kids.length; i++) {
+      var node = kids[i];
+      if (node.id === "bbl") continue;
+      if (on) {
+        if (!node.hasAttribute("inert")) {
+          node.setAttribute("inert", "");
+          node.setAttribute("data-pkg-auto-inert", "");
+        }
+      } else if (node.hasAttribute("data-pkg-auto-inert")) {
+        node.removeAttribute("inert");
+        node.removeAttribute("data-pkg-auto-inert");
+      }
+    }
+  }
   function endAuto() {
     var d = document.documentElement;
-    if (autoEnding || !d.classList.contains("pkg-auto")) return;
+    if (!d.classList.contains("pkg-auto")) { setAutoInert(false); return; }
+    if (autoEnding) return;
     autoEnding = true;
     var age = window.performance && performance.now ? performance.now() : AUTO_MIN_MS;
     setTimeout(function () {
+      setAutoInert(false);
       d.classList.add("pkg-auto-out");
       d.classList.remove("pkg-auto");
       setTimeout(function () { d.classList.remove("pkg-auto-out"); }, AUTO_FADE_MS);
@@ -527,6 +546,7 @@
     for (var i = 0; i < goBtns.length; i++) goBtns[i].addEventListener("click", function (ev) { hearLive(ev.currentTarget.getAttribute("data-pkg-go")); });
     applyPkgUi();
     if (autoStartPkg) {
+      setAutoInert(document.documentElement.classList.contains("pkg-auto"));
       // Same words as gettingMsg(), with the package name in gold; rewriting it also lets the live region announce it.
       var msg = $("bbl-msg"), name = PKGS[chosenPkg].name, at = gettingMsg().indexOf(name);
       msg.textContent = "";
