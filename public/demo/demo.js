@@ -535,17 +535,23 @@
       for (var i = 0; i < b.length; i++) h += (b[i] < 16 ? "0" : "") + b[i].toString(16);
       return h;
     } catch (e) {
-      return (Date.now().toString(16) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)).slice(0, 32);
+      var fallback = Date.now().toString(16);
+      while (fallback.length < 32) {
+        var part = Math.floor(Math.random() * 0x100000000).toString(16);
+        fallback += ("00000000" + part).slice(-8);
+      }
+      return fallback.slice(0, 32);
     }
   }
+  function validVisitorId(v) { return typeof v === "string" && /^[A-Za-z0-9_-]{22,64}$/.test(v); }
   function visitorId() {
     if (memVid) return memVid;
     var v = null;
     try {
       v = localStorage.getItem(VID_KEY);
-      if (!v || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) { v = newVisitorId(); localStorage.setItem(VID_KEY, v); }
+      if (!validVisitorId(v)) { v = newVisitorId(); localStorage.setItem(VID_KEY, v); }
     } catch (e) {
-      if (!v || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) v = newVisitorId();
+      if (!validVisitorId(v)) v = newVisitorId();
     }
     memVid = v;
     return v;
