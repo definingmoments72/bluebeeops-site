@@ -49,9 +49,12 @@
     var json = JSON.stringify(body || {});
     if (beacon && navigator.sendBeacon) {
       // text/plain keeps it a CORS "simple" request; the Worker parses the body as JSON.
-      return navigator.sendBeacon(API + path, new Blob([json], { type: "text/plain" }));
+      try {
+        if (navigator.sendBeacon(API + path, new Blob([json], { type: "text/plain" }))) return true;
+      } catch (e) { /* fall through to keepalive fetch */ }
     }
-    return fetch(API + path, { method: "POST", headers: { "content-type": "application/json" }, body: json, credentials: "omit" })
+    return fetch(API + path, { method: "POST", headers: { "content-type": beacon ? "text/plain" : "application/json" },
+      body: json, credentials: "omit", keepalive: !!beacon })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j._status = r.status; return j; }); });
   }
 
@@ -102,6 +105,7 @@
     if (typeof m.seq === "number") lastSeq = m.seq;
     lastMsg = m;
     if (m.call !== "connecting" && m.call !== "live") $("pkg-next").hidden = true;
+    if ((m.call || "idle") !== callState) { idleSince = Date.now(); idleVerifiedAt = 0; }
     callState = m.call || "idle";
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") + (STATUS[callState] || "");
     $("live-badge").hidden = callState !== "live";
@@ -238,8 +242,10 @@
   }
 
   // ---------- WebSocket ----------
+  var wsStateReady = false;
   function connectWs() {
     if (!lease || wsClosedForGood) return;
+    wsStateReady = false;
     try {
       ws = new WebSocket(WS_API + "/ws?s=" + encodeURIComponent(lease.sessionId), ["bbdemo.v1", lease.sessionToken]);
     } catch (e) { scheduleWs(); return; }
@@ -248,11 +254,18 @@
     ws.onmessage = function (ev) {
       if (ws !== mine) return; // late message from an earlier lease's socket
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-      if (m.type === "hello" || m.type === "state") render(m);
+      if (m.type === "hello" || m.type === "state") {
+        var firstFreshState = !wsStateReady;
+        wsStateReady = true;
+        render(m);
+        if (callState !== "connecting" && callState !== "live") idleVerifiedAt = Date.now();
+        if (firstFreshState && heartbeatQueued) { heartbeatQueued = false; heartbeat(); }
+      }
     };
     ws.onclose = function (ev) {
       if (ws !== mine) return; // a socket from an earlier lease: ignore
       ws = null;
+      wsStateReady = false;
       if (ev.code === 4000) { wsClosedForGood = true; return; } // session wiped after 24 h
       scheduleWs();
     };
@@ -262,11 +275,58 @@
     clearTimeout(wsTimer);
     wsTimer = setTimeout(connectWs, Math.min(30000, 500 * Math.pow(2, wsRetry)));
   }
+  function refreshWsState() {
+    wsStateReady = false;
+    clearTimeout(wsTimer); wsTimer = null;
+    if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
+    if (lease) connectWs();
+  }
 
   // ---------- lease lifecycle ----------
+  // A lease left idle for 15 minutes is released and the visitor goes back to the homepage.
+  // Checked with wall-clock time on every heartbeat, since timers in hidden tabs or sleeping laptops are throttled.
+  // Never during a call: connecting/live block it, and any call state change (e.g. ended) restarts the 15 minutes.
+  var IDLE_RELEASE_MS = 15 * 60 * 1000, IDLE_STATE_FRESH_MS = 60 * 1000, idleSince = 0, idleVerifiedAt = 0;
+  var heartbeatInFlight = false, heartbeatQueued = false, lastHeartbeatCheck = 0, heartbeatEveryMs = HEARTBEAT_MS;
+  function releaseLease(goHome) {
+    if (!lease) return false;
+    var l = lease;
+    stopLease();
+    var sent = post("/lease/release", { sessionId: l.sessionId, sessionToken: l.sessionToken }, true);
+    if (sent && typeof sent.catch === "function") sent.catch(function () {});
+    if (goHome) window.location.replace("/");
+    return true;
+  }
+  function releaseIfIdle() {
+    if (!lease) return false;
+    if (callState === "connecting" || callState === "live") return false;
+    var now = Date.now();
+    if (now - lastCallClick < 5 * 60 * 1000 || now - idleSince < IDLE_RELEASE_MS) return false;
+    // Never trust a 15-minute-old cached call state. Reconnect and wait for hello/state before deciding.
+    if (!wsStateReady || !ws || ws.readyState !== 1 ||
+        idleVerifiedAt < idleSince || now - idleVerifiedAt > IDLE_STATE_FRESH_MS) {
+      heartbeatQueued = true;
+      refreshWsState();
+      return true;
+    }
+    return releaseLease(true);
+  }
   function heartbeat() {
     if (!lease) return;
-    post("/lease/heartbeat", { sessionId: lease.sessionId, sessionToken: lease.sessionToken }).then(function (r) {
+    var now = Date.now();
+    var staleAfterSleep = lastHeartbeatCheck && now - lastHeartbeatCheck > Math.max(60000, heartbeatEveryMs * 3);
+    lastHeartbeatCheck = now;
+    if (staleAfterSleep && document.visibilityState === "visible") {
+      heartbeatQueued = true;
+      refreshWsState();
+      return;
+    }
+    if (heartbeatInFlight) { heartbeatQueued = true; return; }
+    if (releaseIfIdle()) return;
+    var mine = lease;
+    heartbeatInFlight = true;
+    post("/lease/heartbeat", { sessionId: mine.sessionId, sessionToken: mine.sessionToken }).then(function (r) {
+      if (!lease || lease.sessionId !== mine.sessionId) return;
       if (r.ok) { if (r.number !== lease.number) showNumber(r.number); return; }
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
@@ -277,7 +337,10 @@
         $("start-err").textContent = "Too many demo screens are open from this network. Close one and try again.";
         $("start-err").hidden = false;
       }
-    }).catch(function () { /* transient; next beat retries */ });
+    }).catch(function () { /* transient; next beat retries */ }).then(function () {
+      heartbeatInFlight = false;
+      if (heartbeatQueued) { heartbeatQueued = false; heartbeat(); }
+    });
   }
   function startLease(r) {
     // Review SF-5: a new lease starts with fresh WebSocket + card state (stopLease marked the old socket
@@ -285,16 +348,20 @@
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
+    idleSince = Date.now(); idleVerifiedAt = 0;
+    lastHeartbeatCheck = idleSince;
+    heartbeatEveryMs = (r.heartbeatSeconds || 20) * 1000 || HEARTBEAT_MS;
+    heartbeatInFlight = false; heartbeatQueued = false; wsStateReady = false;
     showNumber(r.number);
     clearInterval(hbTimer);
-    hbTimer = setInterval(heartbeat, (r.heartbeatSeconds || 20) * 1000 || HEARTBEAT_MS);
+    hbTimer = setInterval(heartbeat, heartbeatEveryMs);
     clearInterval(pingTimer);
     pingTimer = setInterval(function () { if (ws && ws.readyState === 1) ws.send('{"type":"ping"}'); }, 30000);
     connectWs();
   }
   function stopLease() {
     clearInterval(hbTimer); clearInterval(pingTimer); clearTimeout(wsTimer); wsTimer = null;
-    wsClosedForGood = true;
+    wsClosedForGood = true; wsStateReady = false; heartbeatQueued = false;
     if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
     applyPkgUi();
@@ -433,10 +500,15 @@
   window.addEventListener("pagehide", function () {
     if (!lease || callState === "connecting" || callState === "live") return;
     if (Date.now() - lastCallClick < 5 * 60 * 1000) return;
-    post("/lease/release", { sessionId: lease.sessionId, sessionToken: lease.sessionToken }, true);
+    releaseLease(false);
   });
-  // Heartbeats are throttled in background tabs; send one as soon as the page is visible again.
-  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") heartbeat(); });
+  // A hidden/sleeping tab can miss call-state messages. Reconnect before any idle decision when it returns.
+  document.addEventListener("visibilitychange", function () {
+    if (!lease) return;
+    if (document.visibilityState !== "visible") return;
+    heartbeatQueued = true;
+    refreshWsState();
+  });
 
   document.addEventListener("DOMContentLoaded", function () {
     var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
