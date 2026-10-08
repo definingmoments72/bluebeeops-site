@@ -146,9 +146,9 @@ async function boot(opts = {}) {
 const results = [];
 const check = (name, cond, info) => results.push({ name, ok: !!cond, info });
 const FOOT_A = "Harborline Heating & Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 8 minutes, with a limit of 3 calls per phone per day. Call details are wiped after about a day. If you ask to have a question passed along at the end of the call, your question and the number you called from are emailed to the Blue Bee Ops team so someone can call you back.";
-const FOOT_B = "Harborline Heating & Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 8 minutes, with a limit of 3 calls per phone per day. Call details are wiped after about a day, except a short note that lets the line greet you as a returning caller: what your last demo call was about and, only if you choose to give it at the end of the call, your name. That note is kept for 30 days after your last demo call, then deleted. If you ask to have a question passed along at the end of the call, your question and the number you called from are emailed to the Blue Bee Ops team so someone can call you back.";
-const WRAP_ON = { wrapup: true, memory: false, maxCallSeconds: 480, memoryDays: 0 };
-const MEM_ON = { wrapup: true, memory: true, maxCallSeconds: 480, memoryDays: 30 };
+const FOOT_B = "Harborline Heating & Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 8 minutes, with a limit of 3 calls per phone per day. If you give your name at the end of the call, we remember it and what your call was about for 24 hours, so the shop can greet you if you call again. Other call details are wiped after about a day. If you ask to have a question passed along at the end of the call, your question and the number you called from are emailed to the Blue Bee Ops team so someone can call you back.";
+const WRAP_ON = { wrapup: true, memory: false, maxCallSeconds: 480, memoryDays: 0, memoryHours: 0 };
+const MEM_ON = { wrapup: true, memory: true, maxCallSeconds: 480, memoryDays: 1, memoryHours: 24, memoryNeedsName: true };
 
 (async () => {
   // Pure helpers
@@ -164,7 +164,10 @@ const MEM_ON = { wrapup: true, memory: true, maxCallSeconds: 480, memoryDays: 30
   check("fineText(wrapup) equals footer A", pure.fineText(pure.parseFeatures(WRAP_ON)) === FOOT_A, pure.fineText(pure.parseFeatures(WRAP_ON)));
   check("fineText(memory) equals footer B", pure.fineText(pure.parseFeatures(MEM_ON)) === FOOT_B, pure.fineText(pure.parseFeatures(MEM_ON)));
   check("minutes come from maxCallSeconds", /up to 6 minutes/.test(pure.fineText(pure.parseFeatures({ wrapup: true, maxCallSeconds: 365 }))));
-  check("days come from memoryDays", /kept for 14 days/.test(pure.fineText(pure.parseFeatures({ wrapup: true, memory: true, maxCallSeconds: 480, memoryDays: 14 }))));
+  check("hours come from memoryHours", /for 12 hours/.test(pure.fineText(pure.parseFeatures({ wrapup: true, memory: true, maxCallSeconds: 480, memoryHours: 12 }))));
+  check("memory on without memoryHours -> 24 hours", /for 24 hours/.test(pure.fineText(pure.parseFeatures({ wrapup: true, memory: true, maxCallSeconds: 480, memoryDays: 1 }))));
+  check("no 'days'/'30' memory copy left", !/kept for \d+ days?|days after your last|\b30 days\b/.test(SRC + HTML));
+  check("memory copy is name-conditional", /If you give your name/.test(pure.fineText(pure.parseFeatures(MEM_ON))) && /If you gave your name/.test(HTML));
   check("wrapup:false -> today's text with 5", pure.fineText(pure.parseFeatures({ wrapup: false, memory: false, maxCallSeconds: 300, memoryDays: 0 })) === STATIC_FINE);
   check("no AI wording, no contact@", ![FOOT_A, FOOT_B, HTML].some((s) => /\bAI\b/.test(s.replace(/an AI call assistant/, ""))) && !/contact@/.test(HTML + SRC));
 
