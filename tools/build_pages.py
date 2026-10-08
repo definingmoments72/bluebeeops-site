@@ -423,7 +423,7 @@ PACKAGES = [
             "Set up with you on a 15-minute call",
         ],
         "fine": "Coverage Service takes the details. It doesn't book jobs; you make the callback yourself.",
-        "cta": ("Call us about Coverage", TEL, "btn-gold"),
+        "cta": ("Call us about the Coverage plan", TEL, "btn-gold"),
     },
     {
         "name": "Intake Service", "tag": "A step up", "featured": False, "soon": True,
