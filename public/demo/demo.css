@@ -40,7 +40,8 @@
 button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .btn-ghost { color:var(--text); background:rgba(255,255,255,.05); border-color:rgba(200,215,255,.22); }
 .btn-ghost:hover { color:#fff; border-color:var(--gold-line); background:rgba(255,255,255,.09); }
-.turnstile { min-height:70px; margin:1rem 0; }
+.turnstile { margin:.25rem 0; }
+.turnstile:empty { margin:0; }
 .number { font-size:clamp(2.1rem, 1.5rem + 3vw, 3.3rem); font-weight:800; letter-spacing:-.01em; margin:.2rem 0 1rem; font-variant-numeric:tabular-nums;
   background:linear-gradient(180deg, #fff, #8fa8ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .call { width:100%; max-width:22rem; }
@@ -87,19 +88,19 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 @keyframes fill-sms { from { color:var(--gold-2); } to { color:#fff; } }
 .sms-caption { margin:.9rem 0 0; font-size:.82rem; color:var(--faint); text-align:center; }
 
-/* Package picker (Coverage / Intake / Estimate Request) */
-.pkg-picker { border:0; margin:0 0 1rem; padding:0; display:grid; gap:.55rem; min-width:0; }
-.pkg-picker legend { padding:0; margin:0 0 .55rem; color:var(--faint); font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
-.pkg-opt { display:grid; grid-template-columns:auto minmax(0, 1fr); gap:.7rem; align-items:start; padding:.75rem .9rem; border-radius:12px; cursor:pointer;
+/* Package picker: each package has its own gold "Hear it live" button */
+.pkg-picker { margin:1.25rem 0 .9rem; display:grid; gap:.6rem; min-width:0; }
+.pkg-legend { margin:0 0 .1rem; color:var(--faint); font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+.pkg-opt { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:.6rem 1rem; align-items:center; padding:.85rem .95rem; border-radius:14px;
   background:rgba(255,255,255,.03); border:1px solid var(--edge); transition:border-color .3s, background .3s, box-shadow .3s; }
-.pkg-opt:hover { border-color:rgba(160,185,255,.3); background:rgba(255,255,255,.05); }
-.pkg-opt input { margin:.3rem 0 0; accent-color:var(--gold); width:1rem; height:1rem; }
-.pkg-opt:has(input:checked) { border-color:var(--gold-line); background:rgba(217,180,106,.06); box-shadow:0 0 18px -8px rgba(217,180,106,.5); }
-.pkg-opt:has(input:focus-visible) { outline:2px solid var(--gold); outline-offset:2px; }
+.pkg-opt.selected { border-color:var(--gold-line); background:rgba(217,180,106,.06); box-shadow:0 0 18px -8px rgba(217,180,106,.5); }
 .pkg-body { display:grid; gap:.15rem; min-width:0; }
 .pkg-name { font-weight:700; }
 .pkg-price { color:var(--gold-2); font-weight:600; font-size:.88rem; margin-left:.35rem; white-space:nowrap; }
 .pkg-desc { color:var(--muted); font-size:.9rem; line-height:1.45; }
+.pkg-go { white-space:nowrap; }
+.pkg-go[aria-pressed="true"] { cursor:default; box-shadow:0 0 0 2px rgba(255,236,190,.55); }
+@media (max-width:34rem) { .pkg-opt { grid-template-columns:minmax(0, 1fr); } .pkg-go { width:100%; } }
 .hearing { margin:.2rem 0 .3rem; }
 .hearing strong { color:var(--gold-2); }
 #pkg-hint { margin:0 0 1rem; }

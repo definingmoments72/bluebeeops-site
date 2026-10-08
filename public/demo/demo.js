@@ -12,6 +12,7 @@
   var hbTimer = null, pingTimer = null, wsTimer = null, ws = null, wsRetry = 0, wsClosedForGood = false;
   var callState = "idle", lastSeq = -1, ackedCallback = null, lastCallClick = 0;
   var turnstileToken = null, widgetId = null;
+  var pendingLease = false, leaseInFlight = false, lineClosed = false;
 
   // ---------- package picker (Coverage / Intake / Estimate Request) ----------
   var PKGS = {
@@ -195,8 +196,16 @@
   }
 
   function applyPkgUi() {
-    var radios = document.querySelectorAll('#pkg-picker input[name="package"]');
-    for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === chosenPkg;
+    var rows = document.querySelectorAll("#pkg-picker [data-pkg-row]");
+    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle("selected", rows[i].getAttribute("data-pkg-row") === chosenPkg);
+    var btns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
+    for (var j = 0; j < btns.length; j++) {
+      var mine = btns[j].getAttribute("data-pkg-go") === chosenPkg;
+      btns[j].setAttribute("aria-pressed", lease && mine ? "true" : "false");
+      btns[j].textContent = lease && mine ? "You're hearing this" : "Hear it live";
+      btns[j].disabled = leaseInFlight || lineClosed;
+    }
+    $("pkg-legend").textContent = lease ? "Switch package (same number)" : "Pick a package to hear";
     $("hearing-name").textContent = PKGS[chosenPkg].name;
     $("pkg-hint").textContent = PKGS[chosenPkg].hint;
     if (lastMsg) { var keep = lastSeq; lastSeq = -1; render(lastMsg); lastSeq = keep; }
@@ -279,30 +288,54 @@
     wsClosedForGood = true;
     if (ws) { var old = ws; ws = null; try { old.close(); } catch (e) {} }
     lease = null;
+    applyPkgUi();
   }
   function showBusy(min) {
     $("busy-msg").textContent = min ? "A line should free up in about " + min + " minute" + (min === 1 ? "" : "s") + "." : "Try again in a few minutes.";
     show("busy");
   }
   function showClosed(mode) {
+    lineClosed = true; pendingLease = false;
+    applyPkgUi();
     $("closed-title").textContent = mode === "scheduled-only" ? "The demo line is open for scheduled demos right now." : "The demo line is closed right now.";
     $("closed-msg").textContent = "Please check back later.";
     show("closed");
   }
 
-  function requestLease() {
-    var btn = $("get-number");
-    btn.disabled = true;
+  // A package's "Hear it live" button: select it, then (if no number is held yet) run the lease flow.
+  // With a number already held it only switches the package for the next call (pickPkg -> /lease/package).
+  function hearLive(pkg) {
+    pickPkg(pkg);
+    if (lease || lineClosed || leaseInFlight) return;
+    show("start");
     $("start-err").hidden = true;
+    pendingLease = true;
+    if (turnstileToken) return requestLease();
+    $("start-status").textContent = "Quick check that you're a person\u2026";
+    if (window.turnstile && widgetId !== null && !turnstileToken) {
+      try { if (window.turnstile.isExpired && window.turnstile.isExpired(widgetId)) window.turnstile.reset(widgetId); } catch (e) {}
+    }
+  }
+  function leaseDone() { leaseInFlight = false; pendingLease = false; applyPkgUi(); }
+  function requestLease() {
+    if (leaseInFlight || !turnstileToken) return;
+    leaseInFlight = true; pendingLease = false;
+    applyPkgUi();
+    $("start-err").hidden = true;
+    $("start-status").textContent = "Getting your demo number\u2026";
     post("/lease", { turnstileToken: turnstileToken, package: chosenPkg }).then(function (r) {
       turnstileToken = null;
-      if (r.ok) return startLease(r);
+      leaseInFlight = false;
+      $("start-status").textContent = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
+      if (r.ok) { startLease(r); return leaseDone(); }
+      leaseDone();
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
       resetTurnstile();
       var msg = r.reason === "rate-limited" || r.reason === "ip-cap" ? "Too many tries from this network. Please wait a minute." : "That didn't work. Please try again.";
       $("start-err").textContent = msg; $("start-err").hidden = false;
     }).catch(function () {
+      leaseDone();
       resetTurnstile();
       $("start-err").textContent = "Couldn't reach the demo line. Please try again."; $("start-err").hidden = false;
     });
@@ -310,7 +343,7 @@
 
   // ---------- Turnstile (explicit render, action "lease") ----------
   function resetTurnstile() {
-    turnstileToken = null; $("get-number").disabled = true;
+    turnstileToken = null;
     if (window.turnstile && widgetId !== null) window.turnstile.reset(widgetId);
   }
   function renderTurnstile() {
@@ -319,9 +352,18 @@
       sitekey: cfg.turnstileSiteKey,
       action: "lease",
       theme: "dark",
-      callback: function (t) { turnstileToken = t; $("get-number").disabled = false; },
+      // Shown only if Cloudflare needs the visitor to interact (developers.cloudflare.com/turnstile, appearance modes).
+      appearance: "interaction-only",
+      callback: function (t) { turnstileToken = t; if (pendingLease) requestLease(); },
       "expired-callback": function () { resetTurnstile(); },
-      "error-callback": function () { $("get-number").disabled = true; }
+      "error-callback": function () {
+        turnstileToken = null;
+        if (pendingLease) {
+          pendingLease = false;
+          $("start-status").textContent = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
+          $("start-err").textContent = "The quick person check didn't load. Please refresh the page and try again."; $("start-err").hidden = false;
+        }
+      }
     });
   }
 
@@ -336,11 +378,10 @@
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") heartbeat(); });
 
   document.addEventListener("DOMContentLoaded", function () {
-    $("get-number").addEventListener("click", requestLease);
-    var radios = document.querySelectorAll('#pkg-picker input[name="package"]');
-    for (var i = 0; i < radios.length; i++) radios[i].addEventListener("change", function (ev) { if (ev.target.checked) pickPkg(ev.target.value); });
+    var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
+    for (var i = 0; i < goBtns.length; i++) goBtns[i].addEventListener("click", function (ev) { hearLive(ev.currentTarget.getAttribute("data-pkg-go")); });
     applyPkgUi();
-    $("retry").addEventListener("click", function () { show("start"); resetTurnstile(); });
+    $("retry").addEventListener("click", function () { show("start"); resetTurnstile(); pendingLease = true; $("start-status").textContent = "Quick check that you're a person\u2026"; });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {

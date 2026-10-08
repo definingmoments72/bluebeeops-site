@@ -57,40 +57,19 @@
       <section class="panel glass" id="line" aria-labelledby="line-h">
         <h2 id="line-h">Your demo number</h2>
 
-        <fieldset class="pkg-picker" id="pkg-picker">
-          <legend>Pick a package to hear</legend>
-          <label class="pkg-opt">
-            <input type="radio" name="package" value="coverage" checked>
-            <span class="pkg-body"><span class="pkg-name">Coverage Service <span class="pkg-price">$149/mo</span></span>
-            <span class="pkg-desc">Answers missed and after-hours calls, takes the message, and texts Dave a recap.</span></span>
-          </label>
-          <label class="pkg-opt">
-            <input type="radio" name="package" value="intake">
-            <span class="pkg-body"><span class="pkg-name">Intake Service <span class="pkg-price">$249/mo</span></span>
-            <span class="pkg-desc">Coverage plus daytime overflow. The caller picks an estimate window, and Dave confirms it with one tap.</span></span>
-          </label>
-          <label class="pkg-opt">
-            <input type="radio" name="package" value="estimate">
-            <span class="pkg-body"><span class="pkg-name">Estimate Request Service <span class="pkg-price">$349/mo</span></span>
-            <span class="pkg-desc">Books the estimate live on the call and puts urgent calls straight through to Dave.</span></span>
-          </label>
-        </fieldset>
-        <p class="hearing" aria-live="polite">You're hearing: <strong id="hearing-name">Coverage Service</strong></p>
-        <p class="muted small" id="pkg-hint"></p>
-        <p class="note small" id="pkg-next" hidden>Your new pick takes effect on your next call.</p>
-
         <!-- state: start -->
         <div data-state="start">
-          <p class="muted">Quick check that you're a person, then we'll hold a demo line for you for 15 minutes.</p>
           <p class="note" id="mode-note" hidden>Right now the line is open for scheduled demos only. If you have one booked, go ahead.</p>
+          <!-- Turnstile: one shared widget, appearance "interaction-only" (shown only if a visitor must interact). -->
           <div id="ts-widget" class="turnstile"></div>
-          <button type="button" class="btn btn-gold" id="get-number" disabled>Get a demo number</button>
+          <p class="muted small" id="start-status" aria-live="polite">Pick a package and tap <strong>Hear it live</strong>. We'll hold a demo line for you for 15 minutes.</p>
           <p class="err" id="start-err" role="alert" hidden></p>
         </div>
 
         <!-- state: leased -->
         <div data-state="leased" hidden>
           <p class="number" id="number" aria-live="polite"></p>
+          <p class="hearing" aria-live="polite">You're hearing: <strong id="hearing-name">Coverage Service</strong></p>
           <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
           <figure class="qr">
             <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
@@ -112,6 +91,27 @@
           <p class="big" id="closed-title">The demo line is closed right now.</p>
           <p class="muted" id="closed-msg">Please check back later.</p>
         </div>
+
+        <div class="pkg-picker" id="pkg-picker" role="group" aria-labelledby="pkg-legend">
+          <p class="pkg-legend" id="pkg-legend">Pick a package to hear</p>
+          <div class="pkg-opt" data-pkg-row="coverage">
+            <div class="pkg-body"><span class="pkg-name">Coverage Service <span class="pkg-price">$149/mo</span></span>
+            <span class="pkg-desc">Answers missed and after-hours calls, takes the message, and texts Dave a recap.</span></div>
+            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="coverage" aria-label="Hear Coverage Service live">Hear it live</button>
+          </div>
+          <div class="pkg-opt" data-pkg-row="intake">
+            <div class="pkg-body"><span class="pkg-name">Intake Service <span class="pkg-price">$249/mo</span></span>
+            <span class="pkg-desc">Coverage plus daytime overflow. The caller picks an estimate window, and Dave confirms it with one tap.</span></div>
+            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="intake" aria-label="Hear Intake Service live">Hear it live</button>
+          </div>
+          <div class="pkg-opt" data-pkg-row="estimate">
+            <div class="pkg-body"><span class="pkg-name">Estimate Request Service <span class="pkg-price">$349/mo</span></span>
+            <span class="pkg-desc">Books the estimate live on the call and puts urgent calls straight through to Dave.</span></div>
+            <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="estimate" aria-label="Hear Estimate Request Service live">Hear it live</button>
+          </div>
+        </div>
+        <p class="muted small" id="pkg-hint"></p>
+        <p class="note small" id="pkg-next" hidden>Your new pick takes effect on your next call.</p>
       </section>
 
       <div class="demo-col">
