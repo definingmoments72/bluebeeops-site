@@ -221,7 +221,7 @@
   // 2026-10-08 (Sheri's call): if no call ever reaches this page within the 90 s grace, don't silently snap back to
   // the "before" layout mid-call. Keep the layout, stop the timer and say so. Cleared by a real call state, a new
   // tap on call, or the lease ending.
-  var callNotSeen = false, tapPending = false;
+  var callNotSeen = false, tapPending = false, backSent = false;
   var NOT_SEEN_LABEL = "We can't see your call on this page\u2026";
   var NOT_SEEN_STATUS = "If you're on the call now, it may be showing on a demo page you opened earlier. Hang up, then tap Call again to try from this page.";
   function inCall() { return callState === "connecting" || callState === "live"; }
@@ -289,7 +289,7 @@
   // A tap on a call link: tell the Worker (heartbeat { tap: true }) so a call from this phone pairs with THIS page
   // even if the caller's number is still linked to a page they opened earlier that no longer holds a line.
   function noteCallTap() {
-    lastCallClick = Date.now(); clickSeq = lastSeq; tapPending = true;
+    lastCallClick = Date.now(); clickSeq = lastSeq; tapPending = true; backSent = false;
     if (callNotSeen) {
       // trying again from the "can't see your call" view: keep the live layout (no jump) while the new call starts
       callNotSeen = false;
@@ -312,6 +312,12 @@
     if (now - lastReturnAt < 500) return;
     lastReturnAt = now;
     if (!lease) return;
+    // Two-voice demo: tell the Worker once per call that this page is back in view. The Worker alone decides
+    // (strong pairing, still in setup, early in the call) whether the narrator says "I can see you're on the demo page".
+    if (awayForCall && !backSent) {
+      backSent = true;
+      post("/lease/heartbeat", { sessionId: lease.sessionId, sessionToken: lease.sessionToken, back: true }).catch(function () {});
+    }
     assumeCallAfterTap();
     var wasLive = flow === "live";
     applyFlow();
@@ -660,7 +666,7 @@
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     firstCallEnded = false; awayForCall = false; endedWhileAway = false; awaySeq = -1;
-    pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0; callNotSeen = false; tapPending = false;
+    pendingCallUntil = 0; clearTimeout(pendingTimer); clickSeq = -1; callEndAt = 0; callNotSeen = false; tapPending = false; backSent = false;
     returnCheckPending = false; clearTimeout(returnCheckTimer); returnCheckTimer = null;
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
     // A replacement lease must not briefly reuse the prior session's results or reveal its switcher.
