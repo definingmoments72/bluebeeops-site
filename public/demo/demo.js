@@ -8,6 +8,24 @@
   var WS_API = API.replace(/^http/, "ws");
   var HEARTBEAT_MS = 20000;
 
+  // Owner pass (2026-10-08): Jase's signed link /demo/?owner=<pass>. Stored in this browser's localStorage, removed
+  // from the address bar at once, and sent with /lease. The Worker verifies it (signature, expiry, revocation epoch);
+  // a valid pass skips only the per-network lease limits. Not a secret to this browser, but never shown or logged.
+  var OWNER_KEY = "bb_owner_pass", OWNER_RE = /^v1\.\d{1,9}\.\d{10}\.[A-Za-z0-9_-]{43}$/;
+  (function () {
+    try {
+      var u = new URL(window.location.href);
+      if (!u.searchParams.has("owner")) return;
+      var p = u.searchParams.get("owner");
+      u.searchParams.delete("owner");
+      window.history.replaceState(null, "", u.pathname + u.search + u.hash);
+      if (p && OWNER_RE.test(p)) localStorage.setItem(OWNER_KEY, p);
+    } catch (e) { /* no storage or old browser: page works without it */ }
+  })();
+  function ownerPass() {
+    try { var p = localStorage.getItem(OWNER_KEY); return p && OWNER_RE.test(p) ? p : null; } catch (e) { return null; }
+  }
+
   var lease = null; // { sessionId, sessionToken, number }
   var hbTimer = null, pingTimer = null, wsTimer = null, ws = null, wsRetry = 0, wsClosedForGood = false;
   var callState = "idle", lastSeq = -1, ackedCallback = null, lastCallClick = 0;
@@ -765,6 +783,8 @@
     var body = { turnstileToken: turnstileToken, package: chosenPkg };
     var vid = visitorId();
     if (vid) body.visitorId = vid;
+    var op = ownerPass();
+    if (op) body.ownerPass = op;
     return body;
   }
   function requestLease() {
