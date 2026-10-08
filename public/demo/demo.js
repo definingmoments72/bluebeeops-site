@@ -434,13 +434,39 @@
     if (widgetId === null) renderTurnstile();
   }
   function leaseDone() { leaseInFlight = false; pendingLease = false; applyPkgUi(); }
+  // Random per-browser id (localStorage only, no cookie, never shown) so the Worker can route a returning
+  // visitor's call to the demo page they have open now. Blocked storage falls back to an id for this page only.
+  var VID_KEY = "bb_demo_vid", memVid = null;
+  function newVisitorId() {
+    try {
+      if (window.crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+      var b = new Uint8Array(16); crypto.getRandomValues(b);
+      var h = "";
+      for (var i = 0; i < b.length; i++) h += (b[i] < 16 ? "0" : "") + b[i].toString(16);
+      return h;
+    } catch (e) {
+      return (Date.now().toString(16) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)).slice(0, 32);
+    }
+  }
+  function visitorId() {
+    if (memVid) return memVid;
+    var v = null;
+    try {
+      v = localStorage.getItem(VID_KEY);
+      if (!v || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) { v = newVisitorId(); localStorage.setItem(VID_KEY, v); }
+    } catch (e) {
+      if (!v || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) v = newVisitorId();
+    }
+    memVid = v;
+    return v;
+  }
   function requestLease() {
     if (leaseInFlight || !turnstileToken) return;
     leaseInFlight = true; pendingLease = false;
     applyPkgUi();
     $("start-err").hidden = true;
     $("start-status").textContent = gettingMsg();
-    post("/lease", { turnstileToken: turnstileToken, package: chosenPkg }).then(function (r) {
+    post("/lease", { turnstileToken: turnstileToken, package: chosenPkg, visitorId: visitorId() }).then(function (r) {
       turnstileToken = null;
       leaseInFlight = false;
       $("start-status").textContent = IDLE_STATUS;
