@@ -35,6 +35,8 @@
   var lastMsg = null; // last card state from the Worker, re-rendered when the picker changes
 
   function $(id) { return document.getElementById(id); }
+  // Leaves the ?package= loading state (html.pkg-auto, set by the inline head script): number shown or fallback.
+  function endAuto() { document.documentElement.classList.remove("pkg-auto"); }
   function show(state) {
     var all = document.querySelectorAll("#line [data-state]");
     for (var i = 0; i < all.length; i++) all[i].hidden = all[i].getAttribute("data-state") !== state;
@@ -81,6 +83,7 @@
     link.textContent = "Tap to call " + fmt(e164);
     drawQr(e164);
     show("leased");
+    endAuto();
   }
 
   // ---------- Live Capture card ----------
@@ -299,6 +302,7 @@
   function showBusy(min) {
     $("busy-msg").textContent = min ? "A line should free up in about " + min + " minute" + (min === 1 ? "" : "s") + "." : "Try again in a few minutes.";
     show("busy");
+    endAuto();
   }
   function showClosed(mode) {
     lineClosed = true; pendingLease = false;
@@ -306,6 +310,7 @@
     $("closed-title").textContent = mode === "scheduled-only" ? "The demo line is open for scheduled demos right now." : "The demo line is closed right now.";
     $("closed-msg").textContent = "Please check back later.";
     show("closed");
+    endAuto();
   }
 
   // A package's "Hear it live" button: select it, then (if no number is held yet) run the lease flow.
@@ -335,6 +340,7 @@
       $("start-status").textContent = IDLE_STATUS;
       if (r.ok) { startLease(r); leaseDone(); if (autoStarted) scrollToLine(); return; }
       leaseDone();
+      endAuto();
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
       resetTurnstile();
@@ -342,6 +348,7 @@
       $("start-err").textContent = msg; $("start-err").hidden = false;
     }).catch(function () {
       leaseDone();
+      endAuto();
       resetTurnstile();
       $("start-err").textContent = "Couldn't reach the demo line. Please try again."; $("start-err").hidden = false;
     });
@@ -364,15 +371,18 @@
       // Cloudflare wants the visitor to interact: the widget shows itself (interaction-only); say so.
       "before-interactive-callback": function () {
         if (pendingLease) $("start-status").textContent = "Please finish the quick check above, then we'll get your demo line.";
+        endAuto();
       },
       "expired-callback": function () { resetTurnstile(); },
       "unsupported-callback": function () {
         pendingLease = false;
+        endAuto();
         $("start-status").textContent = IDLE_STATUS;
         $("start-err").textContent = "This browser can't run the quick person check. Please try another browser."; $("start-err").hidden = false;
       },
       "error-callback": function () {
         turnstileToken = null;
+        endAuto();
         if (pendingLease) {
           pendingLease = false;
           $("start-status").textContent = IDLE_STATUS;
@@ -397,6 +407,7 @@
     if (status && status.mode === "scheduled-only") {
       // Public visitors can't call in scheduled-only mode: don't take a line; keep the scheduled-demo note
       // (#mode-note, shown above) and the normal buttons for people who have a demo booked.
+      endAuto();
       return;
     }
     hearLive(autoStartPkg, true);
