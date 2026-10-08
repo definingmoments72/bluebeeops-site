@@ -415,7 +415,7 @@ PACKAGES = [
             "Gets the caller's name, number, and what they need",
             "Texts it to you right away, so you can call back as soon as you're free",
             "Screens out junk calls",
-            "A daily report for the first two weeks, then a weekly report of everything Blue Bee caught",
+            "A daily report of everything Blue Bee caught, plus a note on each caller's mood",
             "Set up with you on a 15-minute call",
         ],
         "fine": "Coverage Service takes the details. It doesn't book jobs; you make the callback yourself.",
@@ -643,7 +643,7 @@ def home_page():
         </ol>
         <div class="reports">
           {ICON_REPORT}
-          <p><strong>You'll see everything it caught.</strong> For the first two weeks you get a daily report, and after that a weekly report of everything Blue Bee caught, so you can count for yourself whether it's worth it.</p>
+          <p><strong>You'll see everything it caught.</strong> Every call comes with a short report, including a note on the caller's mood, and every day you get a report of everything it caught for as long as you're with Blue Bee, so you can count for yourself whether it's worth it.</p>
         </div>
       </div>
     </section>

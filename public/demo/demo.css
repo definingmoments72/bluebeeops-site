@@ -103,8 +103,55 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 @media (max-width:34rem) { .pkg-opt { grid-template-columns:minmax(0, 1fr); } .pkg-go { width:100%; } }
 .hearing { margin:.2rem 0 .3rem; }
 .hearing strong { color:var(--gold-2); }
-#pkg-hint { margin:0 0 1rem; }
-#pkg-next { margin:0 0 1rem; }
+
+/* Two steps under the number: call, then come back to see the results */
+.demo-steps { list-style:none; margin:1rem 0 1.2rem; padding:0; display:grid; gap:.7rem; }
+.demo-step { padding:.95rem 1rem; border-radius:14px; background:rgba(255,255,255,.03); border:1px solid var(--edge); min-width:0; }
+.demo-step:first-child { border-color:var(--gold-line); background:rgba(217,180,106,.05); }
+.step-label { margin:0 0 .2rem; color:var(--gold-2); font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.14em; }
+.step-title { margin:0; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.demo-step .qr { margin:1rem 0 0; }
+.demo-step .call { margin-top:.9rem; }
+.on-desk { display:none; }
+@media (hover:hover) and (pointer:fine) { .on-touch { display:none; } .on-desk { display:inline; } }
+#pkg-hint { margin:.35rem 0 0; }
+
+/* Results view once a call ends ("Here's what Ara caught") */
+.tag-ended { flex:none; font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; padding:.28rem .65rem; border-radius:999px;
+  color:#1a1305; background:var(--gold-2); margin-bottom:.6rem; }
+#capture.is-results h2 { font-size:1.45rem; color:var(--gold-2); }
+#capture.is-results .status { color:var(--text); }
+#capture.is-results .field:not(.filled) { opacity:.5; }
+.mood-note { margin:0 0 1rem; padding:.75rem .9rem; border-radius:12px; border-left:3px solid var(--gold); background:rgba(217,180,106,.08);
+  color:var(--text); font-weight:600; overflow-wrap:anywhere; }
+.mood-note .k { color:var(--gold-2); font-weight:700; }
+.results-next { display:inline-block; margin:1rem 0 0; color:var(--gold-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+
+/* "Try another plan": small, understated, at the bottom; shown only after the first call ends */
+.demo-main .switcher { margin-top:1.25rem; }
+.switcher details { max-width:40rem; }
+.switcher summary { display:inline-flex; align-items:center; gap:.45rem; cursor:pointer; list-style:none; color:var(--muted); font-size:.93rem; font-weight:650;
+  padding:.45rem .2rem; border-radius:8px; text-decoration:underline; text-decoration-color:rgba(200,215,255,.3); text-underline-offset:4px; }
+.switcher summary::-webkit-details-marker { display:none; }
+.switcher summary::after { content:""; width:.42rem; height:.42rem; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+  transform:translateY(-2px) rotate(45deg); transition:transform .25s; }
+.switcher details[open] summary::after { transform:translateY(1px) rotate(-135deg); }
+.switcher summary:hover, .switcher summary:focus-visible { color:var(--text); }
+.sw-lead { margin:.4rem 0 .7rem; }
+.sw-opts { display:grid; gap:.5rem; }
+.sw-opt { display:grid; gap:.15rem; text-align:left; width:100%; font:inherit; color:var(--text); cursor:pointer; padding:.7rem .85rem; border-radius:12px;
+  background:rgba(255,255,255,.03); border:1px solid var(--edge); transition:border-color .3s, background .3s; }
+.sw-opt:hover, .sw-opt:focus-visible { border-color:rgba(200,215,255,.3); background:rgba(255,255,255,.06); }
+.sw-opt.selected { border-color:var(--gold-line); background:rgba(217,180,106,.06); }
+.sw-name { font-weight:700; font-size:.95rem; }
+.sw-name .pkg-price { margin-left:.3rem; }
+.sw-desc { color:var(--muted); font-size:.86rem; line-height:1.45; }
+.sw-now { display:none; color:var(--gold-2); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.12em; }
+.sw-opt.selected .sw-now { display:block; }
+.sw-status { margin:.7rem 0 0; }
+.sw-status:empty { display:none; }
+.sw-call { margin-top:.7rem; }
+#pkg-next { margin:.7rem 0 0; }
 .pkg-cardnote { margin:.9rem 0 0; }
 .sms-bubble .sms-urgent { color:#ffd2c9; font-weight:700; }
 .sms-bubble .sms-actions { margin-top:.5rem; }
