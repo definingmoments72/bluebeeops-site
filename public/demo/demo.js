@@ -23,9 +23,15 @@
       note: "Demo schedule only: nobody will actually come out, and this demo line can't transfer calls." }
   };
   function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
-  var chosenPkg = (function () {
-    try { return validPkg(new URLSearchParams(window.location.search).get("package")) || "coverage"; } catch (e) { return "coverage"; }
+  // ?package= from the homepage plan cards ("Hear this package"). A valid value also auto-starts the
+  // lease flow once (same path as tapping that package's "Hear it live"); plain /demo/ waits for a tap.
+  var urlPkg = (function () {
+    try { return validPkg(new URLSearchParams(window.location.search).get("package")); } catch (e) { return null; }
   })();
+  var chosenPkg = urlPkg || "coverage";
+  var autoStartPkg = urlPkg, autoStarted = false;
+  var IDLE_STATUS = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
+  function gettingMsg() { return "Getting your " + PKGS[chosenPkg].name + " demo line\u2026"; }
   var lastMsg = null; // last card state from the Worker, re-rendered when the picker changes
 
   function $(id) { return document.getElementById(id); }
@@ -304,14 +310,14 @@
 
   // A package's "Hear it live" button: select it, then (if no number is held yet) run the lease flow.
   // With a number already held it only switches the package for the next call (pickPkg -> /lease/package).
-  function hearLive(pkg) {
+  function hearLive(pkg, auto) {
     pickPkg(pkg);
     if (lease || lineClosed || leaseInFlight) return;
     show("start");
     $("start-err").hidden = true;
     pendingLease = true;
     if (turnstileToken) return requestLease();
-    $("start-status").textContent = "Quick check that you're a person\u2026";
+    $("start-status").textContent = auto ? gettingMsg() : "Quick check that you're a person\u2026";
     if (window.turnstile && widgetId !== null && !turnstileToken) {
       try { if (window.turnstile.isExpired && window.turnstile.isExpired(widgetId)) window.turnstile.reset(widgetId); } catch (e) {}
     }
@@ -322,12 +328,12 @@
     leaseInFlight = true; pendingLease = false;
     applyPkgUi();
     $("start-err").hidden = true;
-    $("start-status").textContent = "Getting your demo number\u2026";
+    $("start-status").textContent = gettingMsg();
     post("/lease", { turnstileToken: turnstileToken, package: chosenPkg }).then(function (r) {
       turnstileToken = null;
       leaseInFlight = false;
-      $("start-status").textContent = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
-      if (r.ok) { startLease(r); return leaseDone(); }
+      $("start-status").textContent = IDLE_STATUS;
+      if (r.ok) { startLease(r); leaseDone(); if (autoStarted) scrollToLine(); return; }
       leaseDone();
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
@@ -355,16 +361,45 @@
       // Shown only if Cloudflare needs the visitor to interact (developers.cloudflare.com/turnstile, appearance modes).
       appearance: "interaction-only",
       callback: function (t) { turnstileToken = t; if (pendingLease) requestLease(); },
+      // Cloudflare wants the visitor to interact: the widget shows itself (interaction-only); say so.
+      "before-interactive-callback": function () {
+        if (pendingLease) $("start-status").textContent = "Please finish the quick check above, then we'll get your demo line.";
+      },
       "expired-callback": function () { resetTurnstile(); },
+      "unsupported-callback": function () {
+        pendingLease = false;
+        $("start-status").textContent = IDLE_STATUS;
+        $("start-err").textContent = "This browser can't run the quick person check. Please try another browser."; $("start-err").hidden = false;
+      },
       "error-callback": function () {
         turnstileToken = null;
         if (pendingLease) {
           pendingLease = false;
-          $("start-status").textContent = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
+          $("start-status").textContent = IDLE_STATUS;
           $("start-err").textContent = "The quick person check didn't load. Please refresh the page and try again."; $("start-err").hidden = false;
         }
       }
     });
+  }
+
+  // ---------- auto-start from ?package= (homepage "Hear this package") ----------
+  function scrollToLine() {
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try { $("line").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); } catch (e) { $("line").scrollIntoView(); }
+  }
+  // Runs once, only after /status says the line is open. The Turnstile widget already runs its check on
+  // render (execution "render", the default), so this just asks for the lease as soon as that token arrives,
+  // exactly like an early tap on "Hear it live". If Cloudflare needs interaction, the widget appears.
+  function autoStart(status) {
+    if (!autoStartPkg || autoStarted) return;
+    autoStarted = true;
+    scrollToLine();
+    if (status && status.mode === "scheduled-only") {
+      // Public visitors can't call in scheduled-only mode: don't take a line; keep the scheduled-demo note
+      // (#mode-note, shown above) and the normal buttons for people who have a demo booked.
+      return;
+    }
+    hearLive(autoStartPkg, true);
   }
 
   // Release the line when the visitor really leaves, but never while a call is starting or live
@@ -385,11 +420,12 @@
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {
-      if (s.state === "closed" || s.mode === "off") return showClosed("off");
-      if (s.state === "busy") return showBusy(s.nextFreeInMin);
+      if (s.state === "closed" || s.mode === "off") { if (autoStartPkg) scrollToLine(); return showClosed("off"); }
+      if (s.state === "busy") { if (autoStartPkg) scrollToLine(); return showBusy(s.nextFreeInMin); }
       $("mode-note").hidden = s.mode !== "scheduled-only";
       show("start");
       renderTurnstile();
-    }).catch(function () { show("start"); renderTurnstile(); });
+      autoStart(s);
+    }).catch(function () { show("start"); renderTurnstile(); autoStart(null); });
   });
 })();
