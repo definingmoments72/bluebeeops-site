@@ -217,6 +217,8 @@ section { position:relative; padding:5rem 0; }
 .plan .btn { margin-top:auto; width:100%; }
 .plan .plan-actions { margin-top:auto; display:grid; gap:.65rem; }
 .plan .plan-actions .btn { margin-top:0; }
+/* Sized for two lines so call buttons match across cards whether or not the label wraps. */
+.plan .plan-actions .btn-gold { min-height:4rem; text-align:center; text-wrap:balance; }
 .plan.featured { background:linear-gradient(180deg, rgba(43,84,212,.22), rgba(11,23,54,.55)); border-color:transparent;
   box-shadow:0 30px 70px -30px rgba(43,84,212,.85); }
 @property --angle { syntax:"<angle>"; inherits:false; initial-value:135deg; }
