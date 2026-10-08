@@ -1,5 +1,6 @@
-// Test table for the demo previews' caller-provided text (public/demo/demo.js: scrubPhones, stripClaims,
-// cleanField, callerText). Run: node tools/test_demo_text.js
+// Test table for the demo previews' caller-provided text (public/demo/demo.js). cleanField (caller text only)
+// scrubs phones, drops claim phrases and short-caps; scrubField (Dave's text and the report) only scrubs phones.
+// Run: node tools/test_demo_text.js
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -72,6 +73,22 @@ console.log("Phone scrub (cleanField, cap 60)");
 PHONES.forEach(([i, w]) => row(JSON.stringify(i), T.cleanField(i, 60), w));
 console.log("\nClaim filter (cleanField, cap 60)");
 CLAIMS.forEach(([i, w]) => row(JSON.stringify(i), T.cleanField(i, 60), w));
+
+// [input, expected scrubField(input)]: Dave's preview and the report keep everything except phone numbers.
+const LONG = "Furnace short-cycles every ten minutes since the filter change last week, and the upstairs vents blow cold air.";
+const DAVE = [
+  ["Technician dispatched yesterday but no one came", "Technician dispatched yesterday but no one came"],
+  ["Fri 10am, confirmed", "Fri 10am, confirmed"],
+  ["Was told the appointment is booked, text was sent", "Was told the appointment is booked, text was sent"],
+  [LONG, LONG],
+  ["No heat, call 206\u2011555\u20110123", "No heat, call"],
+  ["Sam 206-555-XXXX", "Sam"],
+  ["5550123", ""],
+  ["Tue 9-11am", "Tue 9-11am"],
+];
+console.log("\nDave's preview + report (scrubField: phones only, no claim filter, no cap)");
+DAVE.forEach(([i, w]) => row(JSON.stringify(i.length > 50 ? i.slice(0, 47) + "..." : i), T.scrubField(i), w));
+row("caller text still filters that claim", T.cleanField("Technician dispatched yesterday but no one came", 60), "no one came");
 
 console.log("\nCaller text");
 const GENERIC_END = "Dave will call you back as soon as he's off the job.";

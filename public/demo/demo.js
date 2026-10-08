@@ -313,15 +313,15 @@
     var cityZip = [card.city, card.zip].filter(Boolean).map(String).join(" ");
     var urg = card.urgency ? String(card.urgency) : "";
     var vals = {
-      name: cleanField(card.name, CAP.name),
+      name: scrubField(card.name),
       nameCheck: nameCheck(card),
       callback: card.callback ? String(card.callback) : "",
       city: cityZip,
-      issue: cleanField(card.issue, CAP.issue),
+      issue: scrubField(card.issue),
       urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
       tap: card.callback ? String(card.callback) : "",
-      window: pkg === "intake" ? cleanField(card.window, CAP.window) : "",
-      appointment: pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "",
+      window: pkg === "intake" ? scrubField(card.window) : "",
+      appointment: pkg === "estimate" ? scrubField(card.appointment) : "",
       mood: card.mood ? String(card.mood) : ""
     };
     var urgentPutThrough = pkg === "estimate" && urg === "emergency";
@@ -345,8 +345,9 @@
   }
 
   // ---------- Caller-provided text going into the previews ----------
-  // Fields from the call (name, issue, window, time) are short-capped, scrubbed of phone numbers, and stripped of
-  // any phrase claiming a booking, dispatch or sent text: the templates carry the meaning, never the caller's words.
+  // Phone numbers never show: every preview (Dave's text, the caller text, the report) scrubs them from the call's
+  // name, issue, window and time. Only the caller text also short-caps those fields and drops phrases claiming a
+  // booking, dispatch or sent text, because its template speaks to the caller; Dave's side keeps the full details.
   // Separators allowed inside a phone number: whitespace, . / ( ) + and every Unicode hyphen/dash/minus.
   var PHONE_SEP = "\\s./()+\\-\\u00ad\\u2010-\\u2015\\u2212\\ufe58\\ufe63\\uff0d";
   var PHONE_MASK = "xX*#\\u2022\\u00b7\\u25cf";
@@ -386,6 +387,11 @@
     return t;
   }
   var CAP = { name: 24, issue: 60, window: 40, appointment: 40 };
+  function scrubField(v) {
+    if (v == null || v === "") return "";
+    var t = scrubPhones(String(v)).replace(/[ \t]{2,}/g, " ").trim();
+    return /[A-Za-z0-9]/.test(t) ? t : "";
+  }
 
   // ---------- Caller text preview (mockup only): the text back a caller gets in the real service ----------
   // Never includes a callback number, and a requested time stays a request for Dave to confirm.
@@ -404,7 +410,7 @@
     return msg;
   }
   // Pure helpers, exposed for tools/test_demo_text.js.
-  window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, callerText: callerText };
+  window.BBDemoText = { scrubPhones: scrubPhones, stripClaims: stripClaims, cleanField: cleanField, scrubField: scrubField, callerText: callerText };
   function renderCallerText(card, pkg) {
     var p = $("caller-msg"), msg = callerText(card, pkg || "coverage");
     if (p.textContent === msg) return;
@@ -430,17 +436,17 @@
     li.id = "dr-mine";
     var top = el("div", "dr-top");
     top.appendChild(el("span", "dr-time", "Just now"));
-    top.appendChild(el("span", "dr-name", cleanField(card.name, CAP.name) || "Your call"));
+    top.appendChild(el("span", "dr-name", scrubField(card.name) || "Your call"));
     top.appendChild(el("span", "dr-tag yours", "Your call"));
     if (urgent) top.appendChild(el("span", "dr-tag urgent", "Urgent"));
     li.appendChild(top);
-    li.appendChild(el("p", "dr-issue", cleanField(card.issue, CAP.issue) || "\u2014"));
+    li.appendChild(el("p", "dr-issue", scrubField(card.issue) || "\u2014"));
     function meta(k, v) { var p = el("p", "dr-meta"); p.appendChild(el("span", "k", k + " ")); p.appendChild(document.createTextNode(v)); li.appendChild(p); }
     var nc = nameCheck(card);
     if (nc) meta("Name check:", nc);
     meta("Mood:", card.mood ? String(card.mood) : "\u2014");
-    var win = pkg === "intake" ? cleanField(card.window, CAP.window) : "";
-    var appt = pkg === "estimate" ? cleanField(card.appointment, CAP.appointment) : "";
+    var win = pkg === "intake" ? scrubField(card.window) : "";
+    var appt = pkg === "estimate" ? scrubField(card.appointment) : "";
     if (win) meta("Wants an estimate:", win + " (Dave to confirm)");
     if (appt) meta("Estimate booked:", appt + " (demo)");
     meta("Callback:", "Needs a callback" + (card.callback ? " \u00b7 " + String(card.callback) : ""));
