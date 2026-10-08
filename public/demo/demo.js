@@ -42,6 +42,7 @@
   })();
   var chosenPkg = urlPkg || "coverage";
   var autoStartPkg = urlPkg, autoStarted = false;
+  var IP_CAP_MSG = "Too many demo screens are open from this network. Close one and try again.";
   var IDLE_STATUS = "Pick a package and tap Hear it live. We'll hold a demo line for you for 15 minutes.";
   function gettingMsg() { return "Getting your " + PKGS[chosenPkg].name + " demo line\u2026"; }
   var lastMsg = null; // last card state from the Worker, re-rendered when the picker changes
@@ -649,7 +650,7 @@
       if (r.reason === "ip-cap") {
         // another screen on this network holds the lines this network may use (review MF-1)
         stopLease(); show("start"); resetTurnstile();
-        $("start-err").textContent = "Too many demo screens are open from this network. Close one and try again.";
+        $("start-err").textContent = IP_CAP_MSG;
         $("start-err").hidden = false;
       }
     }).catch(function () {
@@ -782,7 +783,9 @@
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
       if (r.reason === "closed") return showClosed("off");
       resetTurnstile();
-      var msg = r.reason === "rate-limited" || r.reason === "ip-cap" ? "Too many tries from this network. Please wait a minute." : "That didn't work. Please try again.";
+      // ip-cap = this network already holds its 2 demo lines (other open demo tabs), not "too many tries".
+      var msg = r.reason === "ip-cap" ? IP_CAP_MSG
+        : r.reason === "rate-limited" ? "Too many tries from this network. Please wait a minute." : "That didn't work. Please try again.";
       $("start-err").textContent = msg; $("start-err").hidden = false;
     }).catch(function () {
       leaseDone();
