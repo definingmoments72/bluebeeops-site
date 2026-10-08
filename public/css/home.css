@@ -214,6 +214,13 @@ section { position:relative; padding:5rem 0; }
 .plan li { position:relative; padding-left:1.7rem; color:#cdd5ea; font-size:.98rem; }
 .plan li::before { content:""; position:absolute; left:.1rem; top:.62em; width:.8rem; height:.42rem; border-left:1.5px solid var(--lapis-2); border-bottom:1.5px solid var(--lapis-2); transform:translateY(-50%) rotate(-45deg); }
 .plan .fine { font-size:.84rem; color:var(--faint); margin:-.6rem 0 1.5rem; }
+/* Packages that aren't live yet: a "Coming soon" pill, and buttons that are plain text (no href, so not links or focusable). */
+.plan-tags { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1.1rem; }
+.plan-tags .tag { margin-bottom:0; }
+.plan .tag-soon { color:#1a1205; background:var(--gold-2); border-color:var(--gold-2); }
+.btn.is-disabled, .btn.is-disabled:hover, .btn.is-disabled:active { color:var(--faint); background:rgba(255,255,255,.03); border:1px dashed rgba(200,215,255,.2);
+  box-shadow:none; transform:none; cursor:default; -webkit-backdrop-filter:none; backdrop-filter:none; }
+.btn.is-disabled::after { display:none; }
 .plan .btn { margin-top:auto; width:100%; }
 .plan .plan-actions { margin-top:auto; display:grid; gap:.65rem; }
 .plan .plan-actions .btn { margin-top:0; }
