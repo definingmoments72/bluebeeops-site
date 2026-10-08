@@ -119,6 +119,11 @@
             <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
             <figcaption>Or scan with your phone's camera to call.</figcaption>
           </figure>
+          <!-- Shown only when the lease says repeat-caller memory is on (features.memory). Both copies share one state. -->
+          <div class="fresh" data-fresh hidden>
+            <label class="fresh-opt"><input type="checkbox" id="fresh-lease" data-fresh-box aria-describedby="fresh-lease-hint"> <span>Hear the full walkthrough on my next call</span></label>
+            <p class="muted small fresh-hint" id="fresh-lease-hint">If you gave your name on a demo call in the last <span data-mem-hours>24 hours</span>, this phone normally goes straight to the live call.</p>
+          </div>
           <p class="note"><strong>This call may be recorded.</strong> You'll hear that at the start of the call too.</p>
           <p class="muted small" id="lease-note">We're holding this line for you while this page is open.</p>
         </div>
@@ -270,9 +275,20 @@
         <a class="btn btn-ghost btn-sm call sw-call" id="sw-call" href="#" hidden>Call again</a>
         <p class="note small" id="pkg-next" hidden>Your new pick takes effect on your next call.</p>
       </details>
+      <div class="sw-memory" id="sw-memory" hidden>
+        <p class="muted small" id="next-memory" hidden>If you gave your name at the end, your next call from this phone in the next <span data-mem-hours>24 hours</span> goes straight to the live call, and the receptionist will greet you by name.</p>
+        <div class="fresh" data-fresh hidden>
+          <label class="fresh-opt"><input type="checkbox" id="fresh-again" data-fresh-box aria-describedby="fresh-again-hint"> <span>Hear the full walkthrough on my next call</span></label>
+          <p class="muted small fresh-hint" id="fresh-again-hint">If you gave your name on a demo call in the last <span data-mem-hours>24 hours</span>, this phone normally goes straight to the live call.</p>
+        </div>
+      </div>
     </section>
 
-    <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 5 minutes, with a limit of 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
+    <!-- demo.js rewrites #fine-text from the lease's features (call length, returning-caller note); this static copy is the fallback. -->
+    <div class="fine" id="fine">
+      <p><span id="fine-text">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls last up to 5 minutes, with a limit of 3 calls per phone per day. Call details are wiped after about a day.</span> <a href="/privacy.html">Privacy</a></p>
+      <p id="memory-note" hidden>If you give your name, it's filed with your call's topic under a one-way code made from your phone number, not the number itself, and this page never shows it. If you don't give a name, nothing is kept for a repeat call. To have it deleted sooner, email <a href="mailto:jase@bluebeeops.com">jase@bluebeeops.com</a>.</p>
+    </div>
   </main>
 
   <footer class="site-footer">

@@ -16,6 +16,11 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../public/demo/demo.js"), "utf8"), sandbox);
 const T = sandbox.BBDemoText;
+// The callback line depends on the shop's hours (PT); these rows use an in-hours time (Tue Oct 13 2026, 10:00 AM PDT).
+// tools/test_demo_wrapup_memory.js covers the evening and weekend wording.
+const IN_HOURS = Date.parse("2026-10-13T17:00:00Z");
+const callerTextAt = T.callerText;
+T.callerText = (card, pkg, at) => callerTextAt(card, pkg, at == null ? IN_HOURS : at);
 
 // [input, expected cleanField(input, 60)]
 const PHONES = [
