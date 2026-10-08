@@ -228,6 +228,20 @@ section { position:relative; padding:5rem 0; }
 .plan .plan-actions .btn { margin-top:0; }
 /* Sized for two lines so call buttons match across cards whether or not the label wraps. */
 .plan .plan-actions .btn-gold { min-height:4rem; text-align:center; text-wrap:balance; }
+/* Primary plan CTA: a soft gold halo that breathes and a shimmer that sweeps across now and then.
+   Both animate only transform/opacity; under reduced motion the halo stays as a static glow. */
+.demo-cta { position:relative; display:grid; }
+.demo-cta::before { content:""; position:absolute; inset:-2px; border-radius:999px; pointer-events:none;
+  background:rgba(241,211,145,.35); box-shadow:0 0 14px 3px rgba(241,211,145,.55), 0 0 30px 2px rgba(217,180,106,.3); opacity:.6;
+  animation:halo 2.8s ease-in-out infinite; will-change:transform, opacity; }
+.plan .plan-actions .btn-demo { min-height:4rem; font-size:1.12rem; gap:.55rem;
+  box-shadow:0 0 0 1px rgba(255,236,190,.65) inset, 0 12px 34px -10px rgba(217,180,106,.7); }
+.btn-demo svg { width:1.05em; height:1.05em; }
+.btn-demo::after { animation:shimmer 6s ease-in-out 1.5s infinite; }
+.btn-demo:focus-visible { outline:2px solid #fff; outline-offset:4px; }
+.btn-outline-gold { color:var(--gold-2); background:transparent; border-color:var(--gold-line); text-align:center; text-wrap:balance; }
+.plan .plan-actions .btn-outline-gold { padding-inline:1rem; font-size:.95rem; }
+.btn-outline-gold:hover { color:var(--gold-2); border-color:var(--gold); background:rgba(217,180,106,.08); }
 .plan.featured { background:linear-gradient(180deg, rgba(43,84,212,.22), rgba(11,23,54,.55)); border-color:transparent;
   box-shadow:0 30px 70px -30px rgba(43,84,212,.85); }
 @property --angle { syntax:"<angle>"; inherits:false; initial-value:135deg; }
@@ -296,6 +310,8 @@ section { position:relative; padding:5rem 0; }
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes orbit { to { --angle:495deg; } }
 @keyframes pulse { 0% { opacity:.65; transform:scale(1); } 100% { opacity:0; transform:scale(1.9); } }
+@keyframes halo { 0%, 100% { opacity:.45; transform:scale(1); } 50% { opacity:1; transform:scale(1.035, 1.12); } }
+@keyframes shimmer { 0%, 72% { transform:translateX(-120%); } 88%, 100% { transform:translateX(120%); } }
 @keyframes sheen { 0%, 100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
 @keyframes cue { 0% { opacity:0; transform:translateY(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateY(.8rem); } }
 @keyframes flash { 0% { opacity:0; transform:scale(.4); } 35% { opacity:1; } 100% { opacity:0; transform:scale(1.5); } }
