@@ -186,7 +186,7 @@ HOME_STYLE = """
     :root {
       --ink:#0f1b33; --muted:#4b5567; --paper:#f8f7f3; --surface:#fff; --line:#e3e0d6;
       --lapis:#1d3f99; --lapis-hover:#16327c; --navy:#0a1a44; --navy-2:#06122f;
-      --gold:#d4ab55; --gold-ink:#87621a; --silver:#c9d0dc; --silver-ink:#5d6678;
+      --gold:#d4ab55; --gold-ink:#87621a; --silver:#c9d0dc; --silver-ink:#5d6678; --green:#1e8a4a;
       --radius:14px; --shadow:0 1px 2px rgba(10,26,68,.06), 0 8px 24px rgba(10,26,68,.08);
     }
     *, *::before, *::after { box-sizing:border-box; }
@@ -304,7 +304,8 @@ HOME_STYLE = """
     .plan ul { list-style:none; padding:0; margin:0 0 1.5rem; display:grid; gap:.6rem; }
     .plan li { position:relative; padding-left:1.75rem; }
     .plan li::before { content:""; position:absolute; left:0; top:.42em; width:1.05rem; height:1.05rem; border-radius:50%;
-      background:var(--lapis) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E") center/80% no-repeat; }
+      background:var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E") center/80% no-repeat; }
+    .plan li.inh::before { background-color:var(--lapis); }
     .plan .fine { font-size:.85rem; color:var(--muted); margin:-.75rem 0 1.5rem; }
     .plan .btn { margin-top:auto; width:100%; }
     .plan.featured { background:linear-gradient(160deg, var(--navy) 0%, #10245e 100%); color:#fff; border-color:var(--navy);
@@ -313,7 +314,6 @@ HOME_STYLE = """
     .plan.featured .summary, .plan.featured .price .per { color:var(--silver); }
     .plan.featured .setup { color:var(--gold); }
     .plan.featured .fine { color:var(--silver); }
-    .plan.featured li::before { background-color:var(--gold); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2306122f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E"); }
     .plan.featured :focus-visible { outline-color:var(--gold); }
     .plans-note { margin:1.75rem 0 0; color:var(--muted); max-width:44rem; }
     .plan-tags { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1rem; }
@@ -429,7 +429,7 @@ PACKAGES = [
         "name": "Intake Service", "tag": "A step up", "featured": False, "soon": True,
         "price": "$249", "setup": None,
         "summary": "For shops that want more of the conversation handled before they call back.",
-        "includes": "Everything in Coverage Service, plus:",
+        "includes": None,
         "items": [
             "Helps with daytime overflow, not just missed and after-hours calls",
             "Goes deeper on intake questions for your kind of work",
@@ -443,7 +443,7 @@ PACKAGES = [
         "name": "Estimate Request Service", "tag": "Top tier", "featured": False, "soon": True,
         "price": "$349", "setup": "plus $300 to $500 setup",
         "summary": "For shops that want estimates on the calendar before the caller hangs up.",
-        "includes": "Everything in Intake Service, plus:",
+        "includes": None,
         "items": [
             "Books estimates live on the call",
             "Puts urgent calls straight through to you",
@@ -453,12 +453,12 @@ PACKAGES = [
     },
 ]
 
-def plan_card(p):
+def plan_card(p, inherited=()):
     cls = "plan featured" if p["featured"] else "plan"
     hid = "plan-" + p["name"].split()[0].lower()
     setup = f'\n          <p class="setup">{p["setup"]}</p>' if p["setup"] else '\n          <p class="setup">&nbsp;</p>'
     includes = f'\n          <p class="includes">{p["includes"]}</p>' if p["includes"] else ""
-    items = "\n".join(f"            <li>{i}</li>" for i in p["items"])
+    items = "\n".join([f'            <li class="inh">{i}</li>' for i in inherited] + [f"            <li>{i}</li>" for i in p["items"]])
     fine = f'\n          <p class="fine">{p["fine"]}</p>' if p["fine"] else ""
     label, href, btn = p["cta"]
     # Packages that aren't live yet: a "Coming soon" pill and a button with no href (not a link, not focusable).
@@ -508,7 +508,7 @@ JSON_LD = f"""{{
   }}"""
 
 def home_page():
-    plans = "\n".join(plan_card(p) for p in PACKAGES)
+    plans = "\n".join(plan_card(p, [i for q in PACKAGES[:n] for i in q["items"]]) for n, p in enumerate(PACKAGES))
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>

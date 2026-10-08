@@ -1,7 +1,7 @@
 :root {
   --bg:#04060d; --bg-2:#070c1c; --navy:#0b1736; --lapis:#2b54d4; --lapis-2:#4b7bff;
   --text:#e9edf7; --muted:#9aa6c2; --faint:#6c7895;
-  --gold:#d9b46a; --gold-2:#f1d391; --gold-line:rgba(217,180,106,.45);
+  --gold:#d9b46a; --gold-2:#f1d391; --gold-line:rgba(217,180,106,.45); --green:#3ddc84;
   --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.08); --edge:rgba(160,185,255,.14);
   --radius:20px; --ease:cubic-bezier(.2,.7,.2,1); --spring:cubic-bezier(.16,1.12,.3,1);
 }
@@ -212,7 +212,9 @@ section { position:relative; padding:5rem 0; }
 .plan .includes { font-size:.9rem; font-weight:700; margin:0 0 .6rem; color:var(--text); }
 .plan ul { list-style:none; padding:0; margin:0 0 1.5rem; display:grid; gap:.65rem; }
 .plan li { position:relative; padding-left:1.7rem; color:#cdd5ea; font-size:.98rem; }
-.plan li::before { content:""; position:absolute; left:.1rem; top:.62em; width:.8rem; height:.42rem; border-left:1.5px solid var(--lapis-2); border-bottom:1.5px solid var(--lapis-2); transform:translateY(-50%) rotate(-45deg); }
+/* Plan checks: green for what the plan itself adds, blue for features carried over from the plans below it. */
+.plan li::before { content:""; position:absolute; left:.1rem; top:.62em; width:.8rem; height:.42rem; border-left:2px solid var(--green); border-bottom:2px solid var(--green); transform:translateY(-50%) rotate(-45deg); }
+.plan li.inh::before { border-color:var(--lapis-2); }
 .plan .fine { font-size:.84rem; color:var(--faint); margin:-.6rem 0 1.5rem; }
 /* Packages that aren't live yet: a "Coming soon" pill, and buttons that are plain text (no href, so not links or focusable). */
 .plan-tags { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1.1rem; }
@@ -234,7 +236,7 @@ section { position:relative; padding:5rem 0; }
   animation:orbit 10s linear infinite;
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; }
 .plan.featured .tag { color:var(--gold-2); background:rgba(217,180,106,.12); border-color:var(--gold-line); }
-.plan.featured li::before { border-color:var(--gold); }
+
 .plans-note { margin:2.25rem auto 0; color:var(--muted); max-width:44rem; text-align:center; }
 
 /* About */

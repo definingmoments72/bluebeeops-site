@@ -25,7 +25,7 @@
     :root {
       --ink:#0f1b33; --muted:#4b5567; --paper:#f8f7f3; --surface:#fff; --line:#e3e0d6;
       --lapis:#1d3f99; --lapis-hover:#16327c; --navy:#0a1a44; --navy-2:#06122f;
-      --gold:#d4ab55; --gold-ink:#87621a; --silver:#c9d0dc; --silver-ink:#5d6678;
+      --gold:#d4ab55; --gold-ink:#87621a; --silver:#c9d0dc; --silver-ink:#5d6678; --green:#1e8a4a;
       --radius:14px; --shadow:0 1px 2px rgba(10,26,68,.06), 0 8px 24px rgba(10,26,68,.08);
     }
     *, *::before, *::after { box-sizing:border-box; }
@@ -143,7 +143,8 @@
     .plan ul { list-style:none; padding:0; margin:0 0 1.5rem; display:grid; gap:.6rem; }
     .plan li { position:relative; padding-left:1.75rem; }
     .plan li::before { content:""; position:absolute; left:0; top:.42em; width:1.05rem; height:1.05rem; border-radius:50%;
-      background:var(--lapis) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E") center/80% no-repeat; }
+      background:var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E") center/80% no-repeat; }
+    .plan li.inh::before { background-color:var(--lapis); }
     .plan .fine { font-size:.85rem; color:var(--muted); margin:-.75rem 0 1.5rem; }
     .plan .btn { margin-top:auto; width:100%; }
     .plan.featured { background:linear-gradient(160deg, var(--navy) 0%, #10245e 100%); color:#fff; border-color:var(--navy);
@@ -152,7 +153,6 @@
     .plan.featured .summary, .plan.featured .price .per { color:var(--silver); }
     .plan.featured .setup { color:var(--gold); }
     .plan.featured .fine { color:var(--silver); }
-    .plan.featured li::before { background-color:var(--gold); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2306122f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M4 8.5l2.6 2.5L12 5.5'/%3E%3C/svg%3E"); }
     .plan.featured :focus-visible { outline-color:var(--gold); }
     .plans-note { margin:1.75rem 0 0; color:var(--muted); max-width:44rem; }
     .plan-tags { display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:1rem; }
@@ -404,8 +404,13 @@
           <p class="summary">For shops that want more of the conversation handled before they call back.</p>
           <p class="price"><span class="amt">$249</span><span class="per">a month</span></p>
           <p class="setup">&nbsp;</p>
-          <p class="includes">Everything in Coverage Service, plus:</p>
           <ul>
+            <li class="inh">Answers your missed and after-hours calls in your shop's name</li>
+            <li class="inh">Gets the caller's name, number, and what they need</li>
+            <li class="inh">Texts it to you right away, so you can call back as soon as you're free</li>
+            <li class="inh">Screens out junk calls</li>
+            <li class="inh">A daily report of everything Blue Bee caught, plus a note on each caller's mood</li>
+            <li class="inh">Set up with you on a 15-minute call</li>
             <li>Helps with daytime overflow, not just missed and after-hours calls</li>
             <li>Goes deeper on intake questions for your kind of work</li>
             <li>Answers more of your common questions</li>
@@ -419,8 +424,17 @@
           <p class="summary">For shops that want estimates on the calendar before the caller hangs up.</p>
           <p class="price"><span class="amt">$349</span><span class="per">a month</span></p>
           <p class="setup">plus $300 to $500 setup</p>
-          <p class="includes">Everything in Intake Service, plus:</p>
           <ul>
+            <li class="inh">Answers your missed and after-hours calls in your shop's name</li>
+            <li class="inh">Gets the caller's name, number, and what they need</li>
+            <li class="inh">Texts it to you right away, so you can call back as soon as you're free</li>
+            <li class="inh">Screens out junk calls</li>
+            <li class="inh">A daily report of everything Blue Bee caught, plus a note on each caller's mood</li>
+            <li class="inh">Set up with you on a 15-minute call</li>
+            <li class="inh">Helps with daytime overflow, not just missed and after-hours calls</li>
+            <li class="inh">Goes deeper on intake questions for your kind of work</li>
+            <li class="inh">Answers more of your common questions</li>
+            <li class="inh">Lets the caller pick an estimate window, which you confirm with one tap</li>
             <li>Books estimates live on the call</li>
             <li>Puts urgent calls straight through to you</li>
           </ul>
