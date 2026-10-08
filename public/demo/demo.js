@@ -13,6 +13,20 @@
   var callState = "idle", lastSeq = -1, ackedCallback = null, lastCallClick = 0;
   var turnstileToken = null, widgetId = null;
 
+  // ---------- package picker (Coverage / Intake / Estimate Request) ----------
+  var PKGS = {
+    coverage: { name: "Coverage Service", hint: "Try it: describe a heating or cooling problem like a homeowner would.", note: "" },
+    intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows the assistant offers.",
+      note: "Dave confirms the requested window with one tap. Nothing is booked until he does." },
+    estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot the assistant offers, or say it's an emergency to hear the put-through.",
+      note: "Demo schedule only: nobody will actually come out, and this demo line can't transfer calls." }
+  };
+  function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
+  var chosenPkg = (function () {
+    try { return validPkg(new URLSearchParams(window.location.search).get("package")) || "coverage"; } catch (e) { return "coverage"; }
+  })();
+  var lastMsg = null; // last card state from the Worker, re-rendered when the picker changes
+
   function $(id) { return document.getElementById(id); }
   function show(state) {
     var all = document.querySelectorAll("#line [data-state]");
@@ -64,15 +78,28 @@
 
   // ---------- Live Capture card ----------
   var STATUS = { idle: "Waiting for your call.", connecting: "Call coming in\u2026", live: "On the call. Watch the card fill in.", ended: "Call ended. Here's what the shop would get." };
+  // The package the card shows: the call's own package once a call has started, else the page's pick.
+  function cardPkg(m) { return (m && m.call && m.call !== "idle" && validPkg(m.package)) || chosenPkg; }
+  function showPkgRows(pkg) {
+    var els = document.querySelectorAll("[data-pkg]");
+    for (var i = 0; i < els.length; i++) els[i].hidden = els[i].getAttribute("data-pkg") !== pkg;
+    var note = $("card-note");
+    note.textContent = PKGS[pkg].note;
+    note.hidden = !PKGS[pkg].note;
+  }
   function render(m) {
     if (typeof m.seq === "number" && m.seq <= lastSeq) return;
     if (typeof m.seq === "number") lastSeq = m.seq;
+    lastMsg = m;
+    if (m.call !== "connecting" && m.call !== "live") $("pkg-next").hidden = true;
     callState = m.call || "idle";
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") + (STATUS[callState] || "");
     $("live-badge").hidden = callState !== "live";
     var card = m.card || {};
+    var pkg = cardPkg(m);
+    showPkgRows(pkg);
     // "city" row shows City/ZIP together: card.city and card.zip (5 digits) from capture_update.
-    ["name", "callback", "issue", "city", "urgency"].forEach(function (f) {
+    ["name", "callback", "issue", "city", "urgency", "window", "appointment"].forEach(function (f) {
       var el = document.querySelector('.field[data-field="' + f + '"]');
       var dd = el.querySelector("dd");
       var v = f === "city"
@@ -86,7 +113,7 @@
       }
       if (f === "urgency") dd.className = v === "emergency" ? "urgency-emergency" : "";
     });
-    renderOwnerText(card);
+    renderOwnerText(card, pkg);
     // Tell the Worker the confirmed callback is on screen (latency measurement, AC3).
     if (card.callback && card.callback !== ackedCallback && ws && ws.readyState === 1) {
       ackedCallback = card.callback;
@@ -96,7 +123,9 @@
 
   // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
   // Built from the same card fields as Live Capture. Values go in with textContent only.
-  function renderOwnerText(card) {
+  var SMS_TITLE = { coverage: "Harborline - new call (Blue Bee Ops)", intake: "Harborline - new call + estimate request", estimate: "Harborline - estimate booked (Blue Bee Ops)" };
+  function renderOwnerText(card, pkg) {
+    pkg = pkg || "coverage";
     var cityZip = [card.city, card.zip].filter(Boolean).map(String).join(" ");
     var urg = card.urgency ? String(card.urgency) : "";
     var vals = {
@@ -105,8 +134,14 @@
       city: cityZip,
       issue: card.issue ? String(card.issue) : "",
       urgency: urg ? urg.charAt(0).toUpperCase() + urg.slice(1) : "",
-      tap: card.callback ? String(card.callback) : ""
+      tap: card.callback ? String(card.callback) : "",
+      window: pkg === "intake" && card.window ? String(card.window) : "",
+      appointment: pkg === "estimate" && card.appointment ? String(card.appointment) : ""
     };
+    var urgentPutThrough = pkg === "estimate" && urg === "emergency";
+    $("sms-urgent").hidden = !urgentPutThrough;
+    $("sms-title").textContent = urgentPutThrough ? "Harborline - URGENT call (Blue Bee Ops)"
+      : (vals.window || vals.appointment) ? SMS_TITLE[pkg] : SMS_TITLE.coverage;
     var any = false;
     Object.keys(vals).forEach(function (k) {
       var el = document.querySelector('#sms-bubble [data-sms="' + k + '"]');
@@ -120,6 +155,31 @@
       }
     });
     $("sms-bubble").classList.toggle("is-empty", !any);
+  }
+
+  function applyPkgUi() {
+    var radios = document.querySelectorAll('#pkg-picker input[name="package"]');
+    for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === chosenPkg;
+    $("hearing-name").textContent = PKGS[chosenPkg].name;
+    $("pkg-hint").textContent = PKGS[chosenPkg].hint;
+    if (lastMsg) { var keep = lastSeq; lastSeq = -1; render(lastMsg); lastSeq = keep; }
+    else { showPkgRows(chosenPkg); renderOwnerText({}, chosenPkg); }
+  }
+  function pickPkg(v) {
+    v = validPkg(v);
+    if (!v || v === chosenPkg) return;
+    chosenPkg = v;
+    try {
+      var u = new URL(window.location.href);
+      u.searchParams.set("package", v);
+      window.history.replaceState(null, "", u.pathname + u.search + u.hash);
+    } catch (e) { /* old browser: URL stays as is */ }
+    applyPkgUi();
+    if (lease) {
+      // Already holding a number: switch the package for the next call on this line.
+      post("/lease/package", { sessionId: lease.sessionId, sessionToken: lease.sessionToken, package: v }).catch(function () {});
+      $("pkg-next").hidden = !(callState === "connecting" || callState === "live");
+    }
   }
 
   // ---------- WebSocket ----------
@@ -197,7 +257,7 @@
     var btn = $("get-number");
     btn.disabled = true;
     $("start-err").hidden = true;
-    post("/lease", { turnstileToken: turnstileToken }).then(function (r) {
+    post("/lease", { turnstileToken: turnstileToken, package: chosenPkg }).then(function (r) {
       turnstileToken = null;
       if (r.ok) return startLease(r);
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
@@ -240,6 +300,9 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     $("get-number").addEventListener("click", requestLease);
+    var radios = document.querySelectorAll('#pkg-picker input[name="package"]');
+    for (var i = 0; i < radios.length; i++) radios[i].addEventListener("change", function (ev) { if (ev.target.checked) pickPkg(ev.target.value); });
+    applyPkgUi();
     $("retry").addEventListener("click", function () { show("start"); resetTurnstile(); });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }

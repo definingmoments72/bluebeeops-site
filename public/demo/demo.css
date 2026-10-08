@@ -87,6 +87,28 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 @keyframes fill-sms { from { color:var(--gold-2); } to { color:#fff; } }
 .sms-caption { margin:.9rem 0 0; font-size:.82rem; color:var(--faint); text-align:center; }
 
+/* Package picker (Coverage / Intake / Estimate Request) */
+.pkg-picker { border:0; margin:0 0 1rem; padding:0; display:grid; gap:.55rem; min-width:0; }
+.pkg-picker legend { padding:0; margin:0 0 .55rem; color:var(--faint); font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+.pkg-opt { display:grid; grid-template-columns:auto minmax(0, 1fr); gap:.7rem; align-items:start; padding:.75rem .9rem; border-radius:12px; cursor:pointer;
+  background:rgba(255,255,255,.03); border:1px solid var(--edge); transition:border-color .3s, background .3s, box-shadow .3s; }
+.pkg-opt:hover { border-color:rgba(160,185,255,.3); background:rgba(255,255,255,.05); }
+.pkg-opt input { margin:.3rem 0 0; accent-color:var(--gold); width:1rem; height:1rem; }
+.pkg-opt:has(input:checked) { border-color:var(--gold-line); background:rgba(217,180,106,.06); box-shadow:0 0 18px -8px rgba(217,180,106,.5); }
+.pkg-opt:has(input:focus-visible) { outline:2px solid var(--gold); outline-offset:2px; }
+.pkg-body { display:grid; gap:.15rem; min-width:0; }
+.pkg-name { font-weight:700; }
+.pkg-price { color:var(--gold-2); font-weight:600; font-size:.88rem; margin-left:.35rem; white-space:nowrap; }
+.pkg-desc { color:var(--muted); font-size:.9rem; line-height:1.45; }
+.hearing { margin:.2rem 0 .3rem; }
+.hearing strong { color:var(--gold-2); }
+#pkg-hint { margin:0 0 1rem; }
+#pkg-next { margin:0 0 1rem; }
+.pkg-cardnote { margin:.9rem 0 0; }
+.sms-bubble .sms-urgent { color:#ffd2c9; font-weight:700; }
+.sms-bubble .sms-actions { margin-top:.5rem; }
+.sms-tap { display:inline-block; padding:.3rem .8rem; border-radius:999px; font-weight:700; font-size:.85rem; color:#0b1736; background:var(--gold-2); }
+
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
 
 @media (prefers-reduced-motion:reduce) { .badge, .field.fresh dd, .sms-bubble .v.fresh { animation:none; } }

@@ -211,6 +211,8 @@ section { position:relative; padding:5rem 0; }
 .plan li::before { content:""; position:absolute; left:.1rem; top:.62em; width:.8rem; height:.42rem; border-left:1.5px solid var(--lapis-2); border-bottom:1.5px solid var(--lapis-2); transform:translateY(-50%) rotate(-45deg); }
 .plan .fine { font-size:.84rem; color:var(--faint); margin:-.6rem 0 1.5rem; }
 .plan .btn { margin-top:auto; width:100%; }
+.plan .plan-actions { margin-top:auto; display:grid; gap:.65rem; }
+.plan .plan-actions .btn { margin-top:0; }
 .plan.featured { background:linear-gradient(180deg, rgba(43,84,212,.22), rgba(11,23,54,.55)); border-color:transparent;
   box-shadow:0 30px 70px -30px rgba(43,84,212,.85); }
 @property --angle { syntax:"<angle>"; inherits:false; initial-value:135deg; }
