@@ -526,22 +526,20 @@
   function leaseDone() { leaseInFlight = false; pendingLease = false; applyPkgUi(); }
   // Random per-browser id (localStorage only, no cookie, never shown) so the Worker can route a returning
   // visitor's call to the demo page they have open now. Blocked storage falls back to an id for this page only.
+  // Only a CSPRNG may mint it (a guessable id would let someone claim another visitor's caller ID); with none
+  // available we send no visitorId at all.
   var VID_KEY = "bb_demo_vid", memVid = null;
   function newVisitorId() {
+    var c = window.crypto;
+    if (!c) return null;
+    try { if (typeof c.randomUUID === "function") return c.randomUUID(); } catch (e) {}
     try {
-      if (window.crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
-      var b = new Uint8Array(16); crypto.getRandomValues(b);
+      if (typeof c.getRandomValues !== "function") return null;
+      var b = new Uint8Array(16); c.getRandomValues(b);
       var h = "";
       for (var i = 0; i < b.length; i++) h += (b[i] < 16 ? "0" : "") + b[i].toString(16);
       return h;
-    } catch (e) {
-      var fallback = Date.now().toString(16);
-      while (fallback.length < 32) {
-        var part = Math.floor(Math.random() * 0x100000000).toString(16);
-        fallback += ("00000000" + part).slice(-8);
-      }
-      return fallback.slice(0, 32);
-    }
+    } catch (e) { return null; }
   }
   function validVisitorId(v) { return typeof v === "string" && /^[A-Za-z0-9_-]{22,64}$/.test(v); }
   function visitorId() {
@@ -549,12 +547,19 @@
     var v = null;
     try {
       v = localStorage.getItem(VID_KEY);
-      if (!validVisitorId(v)) { v = newVisitorId(); localStorage.setItem(VID_KEY, v); }
+      if (!validVisitorId(v)) { v = newVisitorId(); if (v) localStorage.setItem(VID_KEY, v); }
     } catch (e) {
       if (!validVisitorId(v)) v = newVisitorId();
     }
+    if (!validVisitorId(v)) return null;
     memVid = v;
     return v;
+  }
+  function leaseBody() {
+    var body = { turnstileToken: turnstileToken, package: chosenPkg };
+    var vid = visitorId();
+    if (vid) body.visitorId = vid;
+    return body;
   }
   function requestLease() {
     if (leaseInFlight || !turnstileToken) return;
@@ -562,7 +567,7 @@
     applyPkgUi();
     $("start-err").hidden = true;
     $("start-status").textContent = gettingMsg();
-    post("/lease", { turnstileToken: turnstileToken, package: chosenPkg, visitorId: visitorId() }).then(function (r) {
+    post("/lease", leaseBody()).then(function (r) {
       turnstileToken = null;
       leaseInFlight = false;
       $("start-status").textContent = IDLE_STATUS;
