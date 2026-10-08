@@ -157,33 +157,47 @@
       </section>
 
       <section class="panel glass owner" id="owner-text" aria-labelledby="owner-h">
-        <p class="owner-kicker">You were the customer. Here's the other side.</p>
-        <div class="card-head">
-          <h2 id="owner-h">This is what Dave, the shop owner, gets.</h2>
-          <span class="tag-preview">Preview</span>
-        </div>
-        <p class="status muted" id="call-status" aria-live="polite">It fills in live during your call.</p>
-        <div class="sms-phone" aria-label="Mockup of the owner text, built from your call">
-          <div class="phone-top"><span class="phone-dot" aria-hidden="true"></span><b>Blue Bee Ops</b><span>to Dave</span></div>
-          <div class="sms-bubble is-empty" id="sms-bubble">
-            <p class="sms-title" id="sms-title">Harborline - new call (Blue Bee Ops)</p>
-            <p><span class="k">Name:</span> <span class="v blank" data-sms="name">&mdash;</span></p>
-            <p id="sms-namecheck" hidden><span class="k">Name check:</span> <span class="v blank" data-sms="nameCheck">&mdash;</span></p>
-            <p><span class="k">Callback:</span> <span class="v blank" data-sms="callback">&mdash;</span></p>
-            <p><span class="k">City:</span> <span class="v blank" data-sms="city">&mdash;</span></p>
-            <p><span class="k">Issue:</span> <span class="v blank" data-sms="issue">&mdash;</span></p>
-            <p><span class="k">Urgency:</span> <span class="v blank" data-sms="urgency">&mdash;</span></p>
-            <p data-pkg="intake" hidden><span class="k">Wants an estimate:</span> <span class="v blank" data-sms="window">&mdash;</span></p>
-            <p data-pkg="estimate" hidden><span class="k">Estimate booked:</span> <span class="v blank" data-sms="appointment">&mdash;</span></p>
-            <p><span class="k">Mood:</span> <span class="v blank" data-sms="mood">&mdash;</span></p>
-            <p class="sms-urgent" id="sms-urgent" hidden>Urgent: on a live line, this caller is put straight through to you.</p>
-            <p><span class="k">Tap to call back:</span> <span class="v blank" data-sms="tap">&mdash;</span></p>
-            <p class="sms-actions" data-pkg="intake" hidden><span class="sms-tap">Tap to confirm this time</span></p>
+        <p class="owner-kicker">You were the customer. Here's what both sides get.</p>
+        <p class="status muted" id="call-status" aria-live="polite">Both texts fill in live during your call.</p>
+        <div class="sides">
+          <div class="side" id="dave-side">
+            <div class="card-head">
+              <h2 id="owner-h">This is what Dave, the shop owner, gets.</h2>
+              <span class="tag-preview">Preview</span>
+            </div>
+            <div class="sms-phone" aria-label="Mockup of the owner text, built from your call">
+              <div class="phone-top"><span class="phone-dot" aria-hidden="true"></span><b>Blue Bee Ops</b><span>to Dave</span></div>
+              <div class="sms-bubble is-empty" id="sms-bubble">
+                <p class="sms-title" id="sms-title">Harborline - new call (Blue Bee Ops)</p>
+                <p><span class="k">Name:</span> <span class="v blank" data-sms="name">&mdash;</span></p>
+                <p id="sms-namecheck" hidden><span class="k">Name check:</span> <span class="v blank" data-sms="nameCheck">&mdash;</span></p>
+                <p><span class="k">Callback:</span> <span class="v blank" data-sms="callback">&mdash;</span></p>
+                <p><span class="k">City:</span> <span class="v blank" data-sms="city">&mdash;</span></p>
+                <p><span class="k">Issue:</span> <span class="v blank" data-sms="issue">&mdash;</span></p>
+                <p><span class="k">Urgency:</span> <span class="v blank" data-sms="urgency">&mdash;</span></p>
+                <p data-pkg="intake" hidden><span class="k">Wants an estimate:</span> <span class="v blank" data-sms="window">&mdash;</span></p>
+                <p data-pkg="estimate" hidden><span class="k">Estimate booked:</span> <span class="v blank" data-sms="appointment">&mdash;</span></p>
+                <p><span class="k">Mood:</span> <span class="v blank" data-sms="mood">&mdash;</span></p>
+                <p class="sms-urgent" id="sms-urgent" hidden>Urgent: on a live line, this caller is put straight through to you.</p>
+                <p><span class="k">Tap to call back:</span> <span class="v blank" data-sms="tap">&mdash;</span></p>
+                <p class="sms-actions" data-pkg="intake" hidden><span class="sms-tap">Tap to confirm this time</span></p>
+              </div>
+            </div>
+            <p class="mood-note" id="mood-note" hidden><span class="k">Caller mood note:</span> <span id="mood-note-v"></span></p>
+            <p class="muted small pkg-cardnote" id="card-note" hidden></p>
+          </div>
+          <div class="side" id="caller-side">
+            <div class="card-head">
+              <h2 id="caller-h">This is what the caller gets.</h2>
+              <span class="tag-preview">Preview</span>
+            </div>
+            <div class="sms-phone" aria-label="Mockup of the text back to the caller, built from your call">
+              <div class="phone-top"><span class="phone-dot" aria-hidden="true"></span><b>Harborline Heating &amp; Air</b><span>to the caller</span></div>
+              <div class="sms-bubble caller-bubble is-empty" id="caller-bubble"><p id="caller-msg">Hi there, thanks for calling Harborline Heating &amp; Air. We got your message. Dave will call you back as soon as he's off the job.</p></div>
+            </div>
           </div>
         </div>
-        <p class="mood-note" id="mood-note" hidden><span class="k">Caller mood note:</span> <span id="mood-note-v"></span></p>
-        <p class="muted small pkg-cardnote" id="card-note" hidden></p>
-        <p class="sms-caption">Preview of the owner text. Nothing is sent from this demo.</p>
+        <p class="sms-caption">Previews of both texts. Nothing is sent from this demo.</p>
         <p class="sms-caption">The callback number is masked because this screen may be public.</p>
       </section>
 

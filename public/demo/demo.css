@@ -114,6 +114,16 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 .mood-note .k { color:var(--gold-2); font-weight:700; }
 
 /* Who sees what: the visitor was the caller; the phone mockup is the owner's side */
+/* Dave's text and the caller's text: stacked, side by side once the panel is full width (during/after a call) */
+.sides { display:grid; gap:1.75rem; }
+.side { min-width:0; }
+.side .sms-phone { margin-top:.4rem; }
+.caller-bubble { border-radius:16px 16px 4px 16px; color:#e9eefb; background:linear-gradient(160deg, #2b3247, #1c2131);
+  border:1px solid rgba(200,215,255,.16); box-shadow:0 10px 30px -14px rgba(0,0,0,.7); }
+.caller-bubble p.fresh { animation:fill-sms .9s ease-out; }
+@media (min-width:860px) {
+  html[data-flow="live"] .sides, html[data-flow="after"] .sides { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); align-items:start; }
+}
 .owner-kicker { display:none; margin:0 0 .4rem; color:var(--gold-2); font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
 
 /* During and after a call (html[data-flow], set by demo.js): the call block collapses into a slim bar and
@@ -248,4 +258,4 @@ html.pkg-auto-out .bbl-stage { transform:scale(1.06); }
 
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
 
-@media (prefers-reduced-motion:reduce) { .live-dot, .sms-bubble .v.fresh { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .live-dot, .sms-bubble .v.fresh, .caller-bubble p.fresh { animation:none; } }

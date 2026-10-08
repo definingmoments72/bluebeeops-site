@@ -126,9 +126,9 @@
   }
 
   // ---------- Call card -> Dave's text preview ----------
-  var STATUS = { idle: "It fills in live during your call.", connecting: "Call coming in\u2026 Dave's text fills in as you talk.",
-    live: "On the call. Watch Dave's text fill in as you talk.",
-    ended: "Your call ended. This is the text Dave would get, and your call is now at the top of his end-of-day report below." };
+  var STATUS = { idle: "Both texts fill in live during your call.", connecting: "Call coming in\u2026 Both texts fill in as you talk.",
+    live: "On the call. Watch both texts fill in as you talk.",
+    ended: "Your call ended. These are the texts Dave and the caller would get, and your call is now at the top of Dave's end-of-day report below." };
   var CARD_FIELDS = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"];
   function cardHasData(card) { return CARD_FIELDS.some(function (f) { return !!card[f]; }); }
   // The package the card shows: the call's own package once a call has started, else the page's pick.
@@ -155,6 +155,7 @@
     renderResults(m, card);
     showPkgRows(pkg);
     renderOwnerText(card, pkg);
+    renderCallerText(card, pkg);
     renderDaily(callState === "ended" || (firstCallEnded && callState === "idle") ? card : {}, pkg);
     applyFlow(card);
     // Tell the Worker the confirmed callback is on screen (latency measurement, AC3).
@@ -343,6 +344,43 @@
     $("sms-bubble").classList.toggle("is-empty", !any);
   }
 
+  // ---------- Caller text preview (mockup only): the text back a caller gets in the real service ----------
+  // Never includes a callback number, and a requested time stays a request for Dave to confirm.
+  var PHONEISH = /\+?[\d\u2022*(][\d\s().\u2022*-]{5,}[\d\u2022*]/g;
+  function stripPhone(m) {
+    var d = (m.match(/\d/g) || []).length, masked = (m.match(/[\u2022*]/g) || []).length;
+    return d >= 10 || (masked && d + masked >= 7) || /^\(?\d{3}\)?[-. ]\d{4}$/.test(m.trim()) ? "" : m;
+  }
+  function callerPart(v, max) {
+    var t = v ? String(v).replace(PHONEISH, stripPhone).replace(/\s+/g, " ").trim().replace(/[\s.,;:!?-]+$/, "")
+      .replace(/[\s,;:-]*\b(?:(?:call|text|reach)(?: me)?(?: back)?(?: at| on)?|my number(?: is)?|number(?: is)?)$/i, "")
+      .replace(/[\s.,;:!?-]+$/, "") : "";
+    if (t.length > max) t = t.slice(0, max - 1).trim() + "\u2026";
+    return t;
+  }
+  function callerText(card, pkg) {
+    var first = callerPart(String(card.name || "").trim().split(/\s+/)[0], 24);
+    first = first.charAt(0).toUpperCase() + first.slice(1);
+    var issue = callerPart(card.issue, 80);
+    if (issue && !/^[A-Z]{2}/.test(issue)) issue = issue.charAt(0).toLowerCase() + issue.slice(1);
+    var win = pkg === "intake" ? callerPart(card.window, 60) : "";
+    var appt = pkg === "estimate" ? callerPart(card.appointment, 60) : "";
+    var msg = "Hi " + (first || "there") + ", thanks for calling Harborline Heating & Air. " +
+      (issue ? "We got your message about " + issue + ". " : "We got your message. ");
+    if (win) msg += "You picked " + win + " for an estimate. Dave will confirm that time with you as soon as he's off the job.";
+    else if (appt) msg += "Your requested estimate time: " + appt + ". Dave will confirm your requested time.";
+    else msg += "Dave will call you back as soon as he's off the job.";
+    return msg;
+  }
+  function renderCallerText(card, pkg) {
+    var p = $("caller-msg"), msg = callerText(card, pkg || "coverage");
+    if (p.textContent === msg) return;
+    p.textContent = msg;
+    var any = !!(card.name || card.issue || card.window || card.appointment);
+    $("caller-bubble").classList.toggle("is-empty", !any);
+    p.classList.remove("fresh"); void p.offsetWidth; if (any) p.classList.add("fresh");
+  }
+
   // ---------- Example end-of-day report: sample calls + this visitor's call on top once it ends (textContent only) ----------
   var DR_BASE = { answered: 4, urgent: 2, open: 1 };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -391,7 +429,7 @@
     $("pkg-hint").textContent = PKGS[chosenPkg].hint;
     applySwitcher();
     if (lastMsg) { var keep = lastSeq; lastSeq = -1; render(lastMsg); lastSeq = keep; }
-    else { showPkgRows(chosenPkg); renderOwnerText({}, chosenPkg); }
+    else { showPkgRows(chosenPkg); renderOwnerText({}, chosenPkg); renderCallerText({}, chosenPkg); }
   }
   // Hidden until the visitor's first call on a held number has ended.
   function applySwitcher() {
