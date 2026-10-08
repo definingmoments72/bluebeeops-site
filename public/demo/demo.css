@@ -137,6 +137,25 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 @media (max-width:30rem) { .dr-stats dd { font-size:1.3rem; } .dr-stats dt { font-size:.64rem; } }
 @media (prefers-reduced-motion:reduce) { .dr-item.fresh { animation:none; } }
 
+/* Loading state for ?package= links: html.pkg-auto is set by the inline head script and cleared by demo.js
+   once the number is shown or the auto-start falls back. #ts-widget stays rendered so Turnstile can run. */
+.autoload, [data-autoload] { display:none; }
+html.pkg-auto .autoload { display:flex; align-items:center; gap:1rem; padding:1rem 1.1rem; border-radius:14px;
+  background:linear-gradient(110deg, rgba(43,84,212,.12) 30%, rgba(217,180,106,.1) 50%, rgba(43,84,212,.12) 70%);
+  background-size:250% 100%; border:1px solid var(--gold-line); animation:autoload-shimmer 2.4s linear infinite; }
+html[data-autopkg="coverage"] [data-autoload="coverage"],
+html[data-autopkg="intake"] [data-autoload="intake"],
+html[data-autopkg="estimate"] [data-autoload="estimate"] { display:inline; }
+html.pkg-auto #start-status, html.pkg-auto #mode-note, html.pkg-auto #start-err,
+html.pkg-auto #pkg-picker, html.pkg-auto #pkg-hint, html.pkg-auto #pkg-next { display:none !important; }
+.autoload-name { margin:0 0 .15rem; font-weight:700; color:var(--gold-2); }
+.autoload p.small { margin:0; }
+.autoload-spin { flex:none; width:1.6rem; height:1.6rem; border-radius:50%;
+  border:3px solid rgba(120,155,255,.25); border-top-color:var(--gold); animation:autoload-spin .9s linear infinite; }
+@keyframes autoload-spin { to { transform:rotate(360deg); } }
+@keyframes autoload-shimmer { from { background-position:100% 0; } to { background-position:-150% 0; } }
+@media (prefers-reduced-motion:reduce) { html.pkg-auto .autoload, .autoload-spin { animation:none; } }
+
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
 
 @media (prefers-reduced-motion:reduce) { .badge, .field.fresh dd, .sms-bubble .v.fresh { animation:none; } }

@@ -12,6 +12,8 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back. -->
+  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){d.classList.remove("pkg-auto");},20000);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="stylesheet" href="/demo/demo.css">
   <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->
@@ -56,6 +58,14 @@
     <div class="grid">
       <section class="panel glass" id="line" aria-labelledby="line-h">
         <h2 id="line-h">Your demo number</h2>
+
+        <div class="autoload" id="autoload" role="status">
+          <span class="autoload-spin" aria-hidden="true"></span>
+          <div>
+            <p class="autoload-name"><span data-autoload="coverage">Coverage Service</span><span data-autoload="intake">Intake Service</span><span data-autoload="estimate">Estimate Request Service</span></p>
+            <p class="muted small">Getting your demo line&hellip;</p>
+          </div>
+        </div>
 
         <!-- state: start -->
         <div data-state="start">
