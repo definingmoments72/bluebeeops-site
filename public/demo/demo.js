@@ -99,6 +99,7 @@
     if (typeof m.seq === "number") lastSeq = m.seq;
     lastMsg = m;
     if (m.call !== "connecting" && m.call !== "live") $("pkg-next").hidden = true;
+    if ((m.call || "idle") !== callState) idleSince = Date.now();
     callState = m.call || "idle";
     $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") + (STATUS[callState] || "");
     $("live-badge").hidden = callState !== "live";
@@ -261,8 +262,22 @@
   }
 
   // ---------- lease lifecycle ----------
+  // A lease left idle for 15 minutes is released and the visitor goes back to the homepage.
+  // Checked with wall-clock time on every heartbeat, since timers in hidden tabs or sleeping laptops are throttled.
+  // Never during a call: connecting/live block it, and any call state change (e.g. ended) restarts the 15 minutes.
+  var IDLE_RELEASE_MS = 15 * 60 * 1000, idleSince = 0;
+  function releaseIfIdle() {
+    if (callState === "connecting" || callState === "live") return false;
+    var now = Date.now();
+    if (now - lastCallClick < 5 * 60 * 1000 || now - idleSince < IDLE_RELEASE_MS) return false;
+    var l = lease;
+    stopLease();
+    post("/lease/release", { sessionId: l.sessionId, sessionToken: l.sessionToken }, true);
+    window.location.replace("/");
+    return true;
+  }
   function heartbeat() {
-    if (!lease) return;
+    if (!lease || releaseIfIdle()) return;
     post("/lease/heartbeat", { sessionId: lease.sessionId, sessionToken: lease.sessionToken }).then(function (r) {
       if (r.ok) { if (r.number !== lease.number) showNumber(r.number); return; }
       if (r.reason === "busy") return showBusy(r.nextFreeInMin);
@@ -282,6 +297,7 @@
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
+    idleSince = Date.now();
     showNumber(r.number);
     clearInterval(hbTimer);
     hbTimer = setInterval(heartbeat, (r.heartbeatSeconds || 20) * 1000 || HEARTBEAT_MS);
