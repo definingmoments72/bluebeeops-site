@@ -174,7 +174,8 @@
   // ---------- Results view: "Here's what Ara caught" once a call ends ----------
   // Most visitors call from the same phone, so they can't watch: when they come back to the browser after
   // hanging up, they land on the results. Never claims a real text was sent (the owner text stays a PREVIEW).
-  var firstCallEnded = false, awayForCall = false, returnCheckPending = false, returnCheckTimer = null, lastReturnAt = 0;
+  var firstCallEnded = false, awayForCall = false, endedWhileAway = false, awaySeq = -1;
+  var returnCheckPending = false, returnCheckTimer = null, lastReturnAt = 0;
   function renderResults(m, card) {
     var ended = callState === "ended";
     var caught = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"].some(function (f) { return !!card[f]; });
@@ -192,6 +193,7 @@
   function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function scrollToResults() {
     awayForCall = false;
+    endedWhileAway = false;
     var target = $("capture");
     // Let layout settle first (iOS restores its own scroll position when the page comes back).
     setTimeout(function () {
@@ -202,11 +204,15 @@
   function callEnded() {
     if (!firstCallEnded) { firstCallEnded = true; applySwitcher(); }
     if (document.visibilityState === "visible") scrollToResults();
-    else awayForCall = true;
+    else { awayForCall = true; endedWhileAway = true; }
   }
   // The visitor left (phone app, tab switch, bfcache) while a call was starting or just after tapping call.
   function leftPage() {
-    if (callState === "connecting" || callState === "live" || Date.now() - lastCallClick < 5 * 60 * 1000) awayForCall = true;
+    if ((callState === "connecting" || callState === "live" || Date.now() - lastCallClick < 5 * 60 * 1000) && !awayForCall) {
+      awayForCall = true;
+      endedWhileAway = false;
+      awaySeq = lastSeq;
+    }
   }
   // Back on the page: decide once fresh call state arrives (or from the cached state if the socket can't reconnect).
   function cameBack() {
@@ -224,7 +230,11 @@
     if (!returnCheckPending) return;
     returnCheckPending = false;
     clearTimeout(returnCheckTimer);
-    if (awayForCall && callState === "ended") scrollToResults();
+    // A cached "ended" may belong to the previous call. Only scroll if ending was observed while away,
+    // or a fresh socket state advanced beyond the sequence seen when the visitor left.
+    var hasNewEnd = endedWhileAway || (wsStateReady && lastSeq > awaySeq);
+    if (awayForCall && callState === "ended" && hasNewEnd) scrollToResults();
+    else { awayForCall = false; endedWhileAway = false; }
   }
 
   // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
@@ -454,7 +464,11 @@
     // closed-for-good, and the new session's seq numbers start again at 0).
     clearTimeout(wsTimer); wsTimer = null;
     wsClosedForGood = false; wsRetry = 0; lastSeq = -1; ackedCallback = null; callState = "idle";
+    firstCallEnded = false; awayForCall = false; endedWhileAway = false; awaySeq = -1;
+    returnCheckPending = false; clearTimeout(returnCheckTimer); returnCheckTimer = null;
     lease = { sessionId: r.sessionId, sessionToken: r.sessionToken, number: r.number };
+    // A replacement lease must not briefly reuse the prior session's results or reveal its switcher.
+    render({ call: "idle", card: {} });
     idleSince = Date.now(); idleVerifiedAt = 0;
     lastHeartbeatCheck = idleSince;
     heartbeatEveryMs = (r.heartbeatSeconds || 20) * 1000 || HEARTBEAT_MS;
