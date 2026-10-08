@@ -25,18 +25,19 @@
   function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
   // Only live packages can be picked or leased; the others show as "Coming soon".
   function livePkg(v) { v = validPkg(v); return v && PKGS[v].live ? v : null; }
-  // ?package= from the homepage plan cards ("Try a live demo call"). A valid value also auto-starts the
+  // ?package= from the homepage plan cards ("Try a live demo call"). A live package also auto-starts the
   // lease flow once (same path as tapping that package's "Hear it live"); plain /demo/ waits for a tap.
-  // A package that isn't live yet falls back to Coverage (the inline head script does the same for the overlay).
+  // A package that isn't live yet never leases: the param is dropped and the page opens like plain /demo/
+  // with Coverage selected (the inline head script skips the loading overlay for it too).
   // The page stays at the top: the call button is already the first thing under the headline.
   var urlPkg = (function () {
     try {
       var v = validPkg(new URLSearchParams(window.location.search).get("package"));
       if (!v || livePkg(v)) return v;
       var u = new URL(window.location.href);
-      u.searchParams.set("package", "coverage");
+      u.searchParams.delete("package");
       window.history.replaceState(null, "", u.pathname + u.search);
-      return "coverage";
+      return null;
     } catch (e) { return null; }
   })();
   var chosenPkg = urlPkg || "coverage";
