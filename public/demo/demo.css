@@ -137,24 +137,55 @@ button.btn { font:inherit; font-weight:700; cursor:pointer; }
 @media (max-width:30rem) { .dr-stats dd { font-size:1.3rem; } .dr-stats dt { font-size:.64rem; } }
 @media (prefers-reduced-motion:reduce) { .dr-item.fresh { animation:none; } }
 
-/* Loading state for ?package= links: html.pkg-auto is set by the inline head script and cleared by demo.js
-   once the number is shown or the auto-start falls back. #ts-widget stays rendered so Turnstile can run. */
-.autoload, [data-autoload] { display:none; }
-html.pkg-auto .autoload { display:flex; align-items:center; gap:1rem; padding:1rem 1.1rem; border-radius:14px;
-  background:linear-gradient(110deg, rgba(43,84,212,.12) 30%, rgba(217,180,106,.1) 50%, rgba(43,84,212,.12) 70%);
-  background-size:250% 100%; border:1px solid var(--gold-line); animation:autoload-shimmer 2.4s linear infinite; }
+/* Full-screen loading overlay for ?package= links: html.pkg-auto is set by the inline head script and cleared by
+   demo.js once the number is shown or the auto-start falls back (html.pkg-auto-out keeps it up for the fade).
+   #ts-widget stays rendered underneath so Turnstile can run; an interactive challenge ends the overlay first. */
+.bbl, [data-autoload] { display:none; }
 html[data-autopkg="coverage"] [data-autoload="coverage"],
 html[data-autopkg="intake"] [data-autoload="intake"],
 html[data-autopkg="estimate"] [data-autoload="estimate"] { display:inline; }
 html.pkg-auto #start-status, html.pkg-auto #mode-note, html.pkg-auto #start-err,
 html.pkg-auto #pkg-picker, html.pkg-auto #pkg-hint, html.pkg-auto #pkg-next { display:none !important; }
-.autoload-name { margin:0 0 .15rem; font-weight:700; color:var(--gold-2); }
-.autoload p.small { margin:0; }
-.autoload-spin { flex:none; width:1.6rem; height:1.6rem; border-radius:50%;
-  border:3px solid rgba(120,155,255,.25); border-top-color:var(--gold); animation:autoload-spin .9s linear infinite; }
-@keyframes autoload-spin { to { transform:rotate(360deg); } }
-@keyframes autoload-shimmer { from { background-position:100% 0; } to { background-position:-150% 0; } }
-@media (prefers-reduced-motion:reduce) { html.pkg-auto .autoload, .autoload-spin { animation:none; } }
+html.pkg-auto .bbl, html.pkg-auto-out .bbl { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1.4rem; padding:max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom)); overflow:hidden;
+  background:radial-gradient(36rem 30rem at 50% 42%, rgba(43,84,212,.34), rgba(11,23,54,.5) 55%, transparent 80%), var(--bg);
+  transition:opacity .3s ease, visibility 0s; }
+html.pkg-auto-out .bbl { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .3s ease, visibility 0s .3s; }
+html.pkg-auto-out .bbl-stage { transform:scale(1.06); }
+.bbl-stage { position:relative; width:min(15rem, 70vw); aspect-ratio:1; display:grid; place-items:center; transition:transform .3s var(--ease); }
+.bbl-glow { position:absolute; inset:12%; border-radius:50%;
+  background:radial-gradient(circle, rgba(241,211,145,.32), rgba(217,180,106,.1) 45%, rgba(43,84,212,.22) 62%, transparent 72%);
+  animation:bbl-breathe 3.2s ease-in-out infinite; }
+.bbl-fx { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.bbl-arc, .bbl-orbit { transform-box:fill-box; transform-origin:center; }
+.bbl-arc { animation:bbl-spin 2.6s linear infinite; filter:drop-shadow(0 0 3px rgba(241,211,145,.8)); }
+.bbl-orbit { animation:bbl-spin 18s linear infinite reverse; }
+.bbl-orbit use { animation:bbl-twinkle 2.4s ease-in-out infinite; }
+.bbl-orbit use:nth-of-type(2n) { animation-delay:-.8s; }
+.bbl-orbit use:nth-of-type(3n) { animation-delay:-1.6s; }
+.bbl-logo { position:relative; width:62%; aspect-ratio:1; border-radius:50%; overflow:hidden;
+  box-shadow:0 0 0 1px var(--gold-line), 0 0 30px rgba(75,123,255,.55), 0 18px 40px -16px rgba(0,0,0,.8);
+  animation:bbl-float 4.2s ease-in-out infinite; }
+.bbl-logo picture, .bbl-logo img { display:block; width:100%; height:100%; max-width:none; object-fit:cover; }
+.bbl-logo::after { content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 38%, rgba(255,240,205,.32) 50%, transparent 62%); background-size:260% 100%;
+  background-position:120% 0; mix-blend-mode:screen; animation:bbl-sheen 3.6s ease-in-out infinite 0.6s; }
+.bbl-msg { margin:0; max-width:22rem; text-align:center; font-size:1.05rem; font-weight:600; letter-spacing:.01em; color:#d6dceb; text-wrap:balance; }
+.bbl-msg [data-autoload], .bbl-msg .bbl-pkg { color:var(--gold-2); }
+.bbl-bar { position:relative; width:7rem; height:2px; border-radius:2px; overflow:hidden; background:rgba(217,180,106,.18); margin-top:-.4rem; }
+.bbl-bar::after { content:""; position:absolute; inset:0; width:40%; border-radius:inherit;
+  background:linear-gradient(90deg, transparent, var(--gold-2), transparent); animation:bbl-bar 1.6s ease-in-out infinite; }
+@keyframes bbl-spin { to { transform:rotate(360deg); } }
+@keyframes bbl-breathe { 0%, 100% { opacity:.65; transform:scale(.96); } 50% { opacity:1; transform:scale(1.06); } }
+@keyframes bbl-float { 0%, 100% { transform:translateY(-4px); } 50% { transform:translateY(5px); } }
+@keyframes bbl-sheen { 0% { background-position:120% 0; } 55%, 100% { background-position:-20% 0; } }
+@keyframes bbl-twinkle { 0%, 100% { opacity:.35; } 50% { opacity:1; } }
+@keyframes bbl-bar { from { transform:translateX(-100%); } to { transform:translateX(250%); } }
+/* home.css already stops every animation and transition here: the logo, ring and dots stay still. */
+@media (prefers-reduced-motion:reduce) {
+  .bbl-logo::after, .bbl-bar { display:none; }
+  html.pkg-auto-out .bbl-stage { transform:none; }
+}
 
 .fine { color:var(--faint); font-size:.85rem; margin:2.5rem 0 3.5rem; max-width:52rem; }
 

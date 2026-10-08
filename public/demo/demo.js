@@ -36,7 +36,19 @@
 
   function $(id) { return document.getElementById(id); }
   // Leaves the ?package= loading state (html.pkg-auto, set by the inline head script): number shown or fallback.
-  function endAuto() { document.documentElement.classList.remove("pkg-auto"); }
+  // The overlay fades out (html.pkg-auto-out); it is never held past AUTO_MIN_MS after page start.
+  var AUTO_MIN_MS = 400, AUTO_FADE_MS = 350, autoEnding = false;
+  function endAuto() {
+    var d = document.documentElement;
+    if (autoEnding || !d.classList.contains("pkg-auto")) return;
+    autoEnding = true;
+    var age = window.performance && performance.now ? performance.now() : AUTO_MIN_MS;
+    setTimeout(function () {
+      d.classList.add("pkg-auto-out");
+      d.classList.remove("pkg-auto");
+      setTimeout(function () { d.classList.remove("pkg-auto-out"); }, AUTO_FADE_MS);
+    }, Math.max(0, AUTO_MIN_MS - age));
+  }
   function show(state) {
     var all = document.querySelectorAll("#line [data-state]");
     for (var i = 0; i < all.length; i++) all[i].hidden = all[i].getAttribute("data-state") !== state;
@@ -514,6 +526,14 @@
     var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
     for (var i = 0; i < goBtns.length; i++) goBtns[i].addEventListener("click", function (ev) { hearLive(ev.currentTarget.getAttribute("data-pkg-go")); });
     applyPkgUi();
+    if (autoStartPkg) {
+      // Same words as gettingMsg(), with the package name in gold; rewriting it also lets the live region announce it.
+      var msg = $("bbl-msg"), name = PKGS[chosenPkg].name, at = gettingMsg().indexOf(name);
+      msg.textContent = "";
+      msg.appendChild(document.createTextNode(gettingMsg().slice(0, at)));
+      msg.appendChild(el("span", "bbl-pkg", name));
+      msg.appendChild(document.createTextNode(gettingMsg().slice(at + name.length)));
+    }
     $("retry").addEventListener("click", function () { resetTurnstile(); hearLive(chosenPkg); });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }

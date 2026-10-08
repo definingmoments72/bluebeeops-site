@@ -13,7 +13,7 @@
   <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <!-- A valid ?package= (homepage plan cards) shows only a loading state until demo.js has the number or falls back. -->
-  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){d.classList.remove("pkg-auto");},20000);}catch(e){}})();</script>
+  <script>(function(){try{var p=new URLSearchParams(location.search).get("package");if(p!=="coverage"&&p!=="intake"&&p!=="estimate")return;var d=document.documentElement;d.classList.add("pkg-auto");d.setAttribute("data-autopkg",p);setTimeout(function(){if(!d.classList.contains("pkg-auto"))return;d.classList.add("pkg-auto-out");d.classList.remove("pkg-auto");setTimeout(function(){d.classList.remove("pkg-auto-out");},400);},20000);}catch(e){}})();</script>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="stylesheet" href="/demo/demo.css">
   <!-- Non-secret config. J5: replace the Turnstile SITE key placeholder. The SECRET key goes only into the Worker secret TURNSTILE_SECRET. -->
@@ -26,6 +26,35 @@
 </head>
 <body class="demo-page">
   <a class="skip" href="#main">Skip to content</a>
+  <div class="bbl" id="bbl" role="status" aria-live="polite">
+    <div class="bbl-stage" aria-hidden="true">
+      <span class="bbl-glow"></span>
+      <svg class="bbl-fx" viewBox="0 0 240 240" focusable="false">
+        <defs>
+          <linearGradient id="bbl-arc" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f1d391" stop-opacity="0"/>
+            <stop offset="1" stop-color="#f1d391"/>
+          </linearGradient>
+          <path id="bbl-hx" d="M0-4l3.46 2v4L0 4l-3.46-2v-4z"/>
+          <path id="bbl-hs" d="M0-2.8l2.42 1.4v2.8L0 2.8l-2.42-1.4v-2.8z"/>
+        </defs>
+        <circle cx="120" cy="120" r="88" fill="none" stroke="#d9b46a" stroke-opacity=".22"/>
+        <circle class="bbl-arc" cx="120" cy="120" r="88" fill="none" stroke="url(#bbl-arc)" stroke-width="2" stroke-linecap="round" stroke-dasharray="150 403"/>
+        <g class="bbl-orbit" fill="#d9b46a" stroke="none">
+          <circle cx="120" cy="120" r="106" fill="none"/>
+          <use href="#bbl-hx" x="226" y="120"/>
+          <use href="#bbl-hs" x="173" y="211.8"/>
+          <use href="#bbl-hx" x="67" y="211.8"/>
+          <use href="#bbl-hs" x="14" y="120"/>
+          <use href="#bbl-hx" x="67" y="28.2"/>
+          <use href="#bbl-hs" x="173" y="28.2"/>
+        </g>
+      </svg>
+      <span class="bbl-logo"><picture><source type="image/webp" srcset="/img/emblem-128.webp 128w, /img/emblem-512.webp 512w" sizes="9.5rem"><img src="/img/emblem-512.jpg" srcset="/img/emblem-128.jpg 128w, /img/emblem-512.jpg 512w" sizes="9.5rem" width="152" height="152" alt="" loading="lazy" decoding="async"></picture></span>
+    </div>
+    <p class="bbl-msg" id="bbl-msg">Getting your <span data-autoload="coverage">Coverage Service</span><span data-autoload="intake">Intake Service</span><span data-autoload="estimate">Estimate Request Service</span> demo line&hellip;</p>
+    <span class="bbl-bar" aria-hidden="true"></span>
+  </div>
   <div class="demo-glow" aria-hidden="true"></div>
 
   <header class="site-header scrolled">
@@ -58,14 +87,6 @@
     <div class="grid">
       <section class="panel glass" id="line" aria-labelledby="line-h">
         <h2 id="line-h">Your demo number</h2>
-
-        <div class="autoload" id="autoload" role="status">
-          <span class="autoload-spin" aria-hidden="true"></span>
-          <div>
-            <p class="autoload-name"><span data-autoload="coverage">Coverage Service</span><span data-autoload="intake">Intake Service</span><span data-autoload="estimate">Estimate Request Service</span></p>
-            <p class="muted small">Getting your demo line&hellip;</p>
-          </div>
-        </div>
 
         <!-- state: start -->
         <div data-state="start">
