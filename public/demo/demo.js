@@ -237,6 +237,18 @@
     else { awayForCall = false; endedWhileAway = false; }
   }
 
+  // How sure Ara is of the caller's name (card.nameConfidence + card.nameNote), e.g. "Low confidence \u00b7 heard unclearly twice; best guess".
+  // Only medium/low are worth the owner's attention; high, unknown or missing values (older Workers) give "".
+  var NAME_CONF = { medium: "Medium confidence", low: "Low confidence" };
+  function nameCheck(card) {
+    if (!card.name) return "";
+    var label = NAME_CONF[String(card.nameConfidence || "").trim().toLowerCase()];
+    if (!label) return "";
+    var note = card.nameNote ? String(card.nameNote).replace(/\s+/g, " ").trim() : "";
+    if (note.length > 80) note = note.slice(0, 79).trim() + "\u2026";
+    return note ? label + " \u00b7 " + note : label;
+  }
+
   // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
   // Built from the same card fields as Live Capture. Values go in with textContent only.
   var SMS_TITLE = { coverage: "Harborline - new call (Blue Bee Ops)", intake: "Harborline - new call + estimate request", estimate: "Harborline - estimate booked (Blue Bee Ops)" };
@@ -246,6 +258,7 @@
     var urg = card.urgency ? String(card.urgency) : "";
     var vals = {
       name: card.name ? String(card.name) : "",
+      nameCheck: nameCheck(card),
       callback: card.callback ? String(card.callback) : "",
       city: cityZip,
       issue: card.issue ? String(card.issue) : "",
@@ -257,6 +270,7 @@
     };
     var urgentPutThrough = pkg === "estimate" && urg === "emergency";
     $("sms-urgent").hidden = !urgentPutThrough;
+    $("sms-namecheck").hidden = !vals.nameCheck;
     $("sms-title").textContent = urgentPutThrough ? "Harborline - URGENT call (Blue Bee Ops)"
       : (vals.window || vals.appointment) ? SMS_TITLE[pkg] : SMS_TITLE.coverage;
     var any = false;
@@ -296,6 +310,8 @@
     li.appendChild(top);
     li.appendChild(el("p", "dr-issue", card.issue ? String(card.issue) : "\u2014"));
     function meta(k, v) { var p = el("p", "dr-meta"); p.appendChild(el("span", "k", k + " ")); p.appendChild(document.createTextNode(v)); li.appendChild(p); }
+    var nc = nameCheck(card);
+    if (nc) meta("Name check:", nc);
     meta("Mood:", card.mood ? String(card.mood) : "\u2014");
     if (pkg === "intake" && card.window) meta("Wants an estimate:", String(card.window) + " (Dave to confirm)");
     if (pkg === "estimate" && card.appointment) meta("Estimate booked:", String(card.appointment) + " (demo)");
