@@ -16,10 +16,10 @@
 
   // ---------- package picker (Coverage / Intake / Estimate Request) ----------
   var PKGS = {
-    coverage: { name: "Coverage Service", hint: "Try it: describe a heating or cooling problem like a homeowner would.", note: "" },
-    intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows the assistant offers.",
+    coverage: { name: "Coverage Service", hint: "Try it: describe a heating or cooling problem.", note: "" },
+    intake: { name: "Intake Service", hint: "Try it: describe a problem, then pick one of the estimate windows Ara offers.",
       note: "Dave confirms the requested window with one tap. Nothing is booked until he does." },
-    estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot the assistant offers, or say it's an emergency to hear the put-through.",
+    estimate: { name: "Estimate Request Service", hint: "Try it: book the estimate slot Ara offers, or say it's an emergency to hear the put-through.",
       note: "Demo schedule only: nobody will actually come out, and this demo line can't transfer calls." }
   };
   function validPkg(v) { return Object.prototype.hasOwnProperty.call(PKGS, v) ? v : null; }
@@ -115,13 +115,15 @@
     var link = $("call-link");
     link.setAttribute("href", "tel:" + e164);
     link.textContent = "Tap to call " + fmt(e164);
+    $("sw-call").setAttribute("href", "tel:" + e164);
+    $("sw-call").textContent = "Call " + fmt(e164) + " again";
     drawQr(e164);
     show("leased");
     endAuto();
   }
 
   // ---------- Live Capture card ----------
-  var STATUS = { idle: "Waiting for your call.", connecting: "Call coming in\u2026", live: "On the call. Watch the card fill in.", ended: "Call ended. Here's what the shop would get." };
+  var STATUS = { idle: "Waiting for your call.", connecting: "Call coming in\u2026", live: "On the call. Watch the card fill in.", ended: "Here's what Ara took down from your call, and below it, a preview of the text Dave would get." };
   // The package the card shows: the call's own package once a call has started, else the page's pick.
   function cardPkg(m) { return (m && m.call && m.call !== "idle" && validPkg(m.package)) || chosenPkg; }
   function showPkgRows(pkg) {
@@ -136,12 +138,13 @@
     if (typeof m.seq === "number") lastSeq = m.seq;
     lastMsg = m;
     if (m.call !== "connecting" && m.call !== "live") $("pkg-next").hidden = true;
+    var prevState = callState;
     if ((m.call || "idle") !== callState) { idleSince = Date.now(); idleVerifiedAt = 0; }
     callState = m.call || "idle";
-    $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") + (STATUS[callState] || "");
     $("live-badge").hidden = callState !== "live";
     var card = m.card || {};
     var pkg = cardPkg(m);
+    renderResults(m, card);
     showPkgRows(pkg);
     // "city" row shows City/ZIP together: card.city and card.zip (5 digits) from capture_update.
     ["name", "callback", "issue", "city", "urgency", "mood", "window", "appointment"].forEach(function (f) {
@@ -165,6 +168,63 @@
       ackedCallback = card.callback;
       ws.send(JSON.stringify({ type: "ack", field: "callback", seq: m.seq }));
     }
+    if (callState === "ended" && prevState !== "ended") callEnded();
+  }
+
+  // ---------- Results view: "Here's what Ara caught" once a call ends ----------
+  // Most visitors call from the same phone, so they can't watch: when they come back to the browser after
+  // hanging up, they land on the results. Never claims a real text was sent (the owner text stays a PREVIEW).
+  var firstCallEnded = false, awayForCall = false, returnCheckPending = false, returnCheckTimer = null, lastReturnAt = 0;
+  function renderResults(m, card) {
+    var ended = callState === "ended";
+    var caught = ["name", "callback", "issue", "city", "zip", "urgency", "mood", "window", "appointment"].some(function (f) { return !!card[f]; });
+    $("capture").classList.toggle("is-results", ended);
+    $("cap-h").textContent = !ended ? "Live Capture" : caught ? "Here's what Ara caught" : "Call ended";
+    $("ended-tag").hidden = !ended || !caught;
+    $("call-status").textContent = (m.returning && callState !== "idle" ? "Returning caller. " : "") +
+      (!ended ? STATUS[callState] || "" : caught ? STATUS.ended
+        : "Ara didn't catch any details that time. Call again and describe a heating or cooling problem.");
+    var mood = ended && card.mood ? String(card.mood) : "";
+    $("mood-note-v").textContent = mood;
+    $("mood-note").hidden = !mood;
+    $("results-next").hidden = !ended || !caught;
+  }
+  function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function scrollToResults() {
+    awayForCall = false;
+    var target = $("capture");
+    // Let layout settle first (iOS restores its own scroll position when the page comes back).
+    setTimeout(function () {
+      try { target.scrollIntoView({ behavior: reduceMotion() ? "instant" : "smooth", block: "start" }); }
+      catch (e) { target.scrollIntoView(true); }
+    }, 120);
+  }
+  function callEnded() {
+    if (!firstCallEnded) { firstCallEnded = true; applySwitcher(); }
+    if (document.visibilityState === "visible") scrollToResults();
+    else awayForCall = true;
+  }
+  // The visitor left (phone app, tab switch, bfcache) while a call was starting or just after tapping call.
+  function leftPage() {
+    if (callState === "connecting" || callState === "live" || Date.now() - lastCallClick < 5 * 60 * 1000) awayForCall = true;
+  }
+  // Back on the page: decide once fresh call state arrives (or from the cached state if the socket can't reconnect).
+  function cameBack() {
+    var now = Date.now();
+    if (now - lastReturnAt < 500) return;
+    lastReturnAt = now;
+    if (!lease) return;
+    returnCheckPending = true;
+    clearTimeout(returnCheckTimer);
+    returnCheckTimer = setTimeout(checkReturn, 4000);
+    heartbeatQueued = true;
+    refreshWsState();
+  }
+  function checkReturn() {
+    if (!returnCheckPending) return;
+    returnCheckPending = false;
+    clearTimeout(returnCheckTimer);
+    if (awayForCall && callState === "ended") scrollToResults();
   }
 
   // ---------- Owner text preview (mockup only: the demo never sends a text) ----------
@@ -243,17 +303,32 @@
     var rows = document.querySelectorAll("#pkg-picker [data-pkg-row]");
     for (var i = 0; i < rows.length; i++) rows[i].classList.toggle("selected", rows[i].getAttribute("data-pkg-row") === chosenPkg);
     var btns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
-    for (var j = 0; j < btns.length; j++) {
-      var mine = btns[j].getAttribute("data-pkg-go") === chosenPkg;
-      btns[j].setAttribute("aria-pressed", lease && mine ? "true" : "false");
-      btns[j].textContent = lease && mine ? "You're hearing this" : "Hear it live";
-      btns[j].disabled = leaseInFlight || lineClosed;
-    }
-    $("pkg-legend").textContent = lease ? "Switch package (same number)" : "Pick a package to hear";
+    for (var j = 0; j < btns.length; j++) btns[j].disabled = leaseInFlight || lineClosed;
+    // The big picker only starts a lease; with a number held, switching lives in "Try another plan" at the bottom.
+    $("pkg-picker").hidden = !!lease;
     $("hearing-name").textContent = PKGS[chosenPkg].name;
     $("pkg-hint").textContent = PKGS[chosenPkg].hint;
+    applySwitcher();
     if (lastMsg) { var keep = lastSeq; lastSeq = -1; render(lastMsg); lastSeq = keep; }
     else { showPkgRows(chosenPkg); renderOwnerText({}, chosenPkg); }
+  }
+  // Hidden until the visitor's first call on a held number has ended.
+  function applySwitcher() {
+    $("switcher").hidden = !(lease && firstCallEnded);
+    var opts = document.querySelectorAll("#switcher [data-pkg-switch]");
+    for (var i = 0; i < opts.length; i++) {
+      var on = opts[i].getAttribute("data-pkg-switch") === chosenPkg;
+      opts[i].setAttribute("aria-pressed", on ? "true" : "false");
+      opts[i].classList.toggle("selected", on);
+    }
+  }
+  function switchPkg(v) {
+    v = validPkg(v);
+    if (!v || !lease) return;
+    if (v !== chosenPkg) pickPkg(v);
+    var inCall = callState === "connecting" || callState === "live";
+    $("sw-status").textContent = inCall ? "" : "Now set to " + PKGS[v].name + ". Call " + fmt(lease.number) + " again to hear it.";
+    $("sw-call").hidden = inCall;
   }
   function pickPkg(v) {
     v = validPkg(v);
@@ -291,6 +366,7 @@
         render(m);
         if (callState !== "connecting" && callState !== "live") idleVerifiedAt = Date.now();
         if (firstFreshState && heartbeatQueued) { heartbeatQueued = false; heartbeat(); }
+        if (firstFreshState) checkReturn();
       }
     };
     ws.onclose = function (ev) {
@@ -529,17 +605,18 @@
   // Release the line when the visitor really leaves, but never while a call is starting or live
   // (a tap on the tel: link can hide the page; releasing then would break the pairing).
   window.addEventListener("pagehide", function () {
+    leftPage();
     if (!lease || callState === "connecting" || callState === "live") return;
     if (Date.now() - lastCallClick < 5 * 60 * 1000) return;
     releaseLease(false);
   });
-  // A hidden/sleeping tab can miss call-state messages. Reconnect before any idle decision when it returns.
+  // A hidden/sleeping tab can miss call-state messages. Reconnect before any idle decision when it returns,
+  // and bring a visitor back from the phone app onto the results. iOS Safari's bfcache restore fires only pageshow.
   document.addEventListener("visibilitychange", function () {
-    if (!lease) return;
-    if (document.visibilityState !== "visible") return;
-    heartbeatQueued = true;
-    refreshWsState();
+    if (document.visibilityState !== "visible") { leftPage(); return; }
+    cameBack();
   });
+  window.addEventListener("pageshow", function (ev) { if (ev.persisted) cameBack(); });
 
   document.addEventListener("DOMContentLoaded", function () {
     var goBtns = document.querySelectorAll("#pkg-picker [data-pkg-go]");
@@ -556,6 +633,9 @@
     }
     $("retry").addEventListener("click", function () { resetTurnstile(); hearLive(chosenPkg); });
     $("call-link").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
+    $("sw-call").addEventListener("click", function () { lastCallClick = Date.now(); heartbeat(); });
+    var swBtns = document.querySelectorAll("#switcher [data-pkg-switch]");
+    for (var k = 0; k < swBtns.length; k++) swBtns[k].addEventListener("click", function (ev) { switchPkg(ev.currentTarget.getAttribute("data-pkg-switch")); });
     // /status is coarse only: { state: open|scheduled-only|busy|closed, mode, nextFreeInMin }
     fetch(API + "/status", { credentials: "omit" }).then(function (r) { return r.json(); }).then(function (s) {
       if (s.state === "closed" || s.mode === "off") { if (autoStartPkg) scrollToLine(); return showClosed("off"); }

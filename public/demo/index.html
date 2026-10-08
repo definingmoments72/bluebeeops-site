@@ -101,11 +101,22 @@
         <div data-state="leased" hidden>
           <p class="number" id="number" aria-live="polite"></p>
           <p class="hearing" aria-live="polite">You're hearing: <strong id="hearing-name">Coverage Service</strong></p>
-          <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
-          <figure class="qr">
-            <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
-            <figcaption>Or scan with your phone's camera to call.</figcaption>
-          </figure>
+          <ol class="demo-steps">
+            <li class="demo-step">
+              <p class="step-label">Step 1</p>
+              <p class="step-title"><span class="on-touch">Tap to call and talk to Ara like a homeowner would.</span><span class="on-desk">Call the number (or scan the code) and talk to Ara like a homeowner would.</span></p>
+              <p class="muted small" id="pkg-hint"></p>
+              <a class="btn btn-gold call" id="call-link" href="#">Tap to call</a>
+              <figure class="qr">
+                <svg id="qr" role="img" aria-label="QR code that opens your phone's dialer with this number"></svg>
+                <figcaption>Or scan with your phone's camera to call.</figcaption>
+              </figure>
+            </li>
+            <li class="demo-step">
+              <p class="step-label">Step 2</p>
+              <p class="step-title">Come back to this page after you hang up to see exactly what Dave would get.</p>
+            </li>
+          </ol>
           <p class="note"><strong>This call may be recorded.</strong> You'll hear that at the start of the call too.</p>
           <p class="muted small" id="lease-note">We're holding this line for you while this page is open.</p>
         </div>
@@ -141,8 +152,6 @@
             <button type="button" class="btn btn-gold btn-sm pkg-go" data-pkg-go="estimate" aria-label="Hear Estimate Request Service live">Hear it live</button>
           </div>
         </div>
-        <p class="muted small" id="pkg-hint"></p>
-        <p class="note small" id="pkg-next" hidden>Your new pick takes effect on your next call.</p>
       </section>
 
       <div class="demo-col">
@@ -150,8 +159,10 @@
         <div class="card-head">
           <h2 id="cap-h">Live Capture</h2>
           <span class="badge" id="live-badge" hidden>Live</span>
+          <span class="tag-ended" id="ended-tag" hidden>Call ended</span>
         </div>
         <p class="status muted" id="call-status" aria-live="polite">Waiting for your call.</p>
+        <p class="mood-note" id="mood-note" hidden><span class="k">Caller mood note:</span> <span id="mood-note-v"></span></p>
         <dl class="fields">
           <div class="field" data-field="name"><dt>Name</dt><dd>&mdash;</dd></div>
           <div class="field" data-field="callback"><dt>Callback</dt><dd>&mdash;</dd></div>
@@ -163,6 +174,7 @@
           <div class="field" data-field="appointment" data-pkg="estimate" hidden><dt>Estimate booked</dt><dd>&mdash;</dd></div>
         </dl>
         <p class="muted small pkg-cardnote" id="card-note" hidden></p>
+        <a class="results-next" id="results-next" href="#owner-text" hidden>See the text Dave would get (preview)</a>
         <p class="muted small">The callback number is masked because this screen may be public.</p>
       </section>
 
@@ -235,6 +247,33 @@
         </ol>
       </div>
       <p class="sms-caption">Example report with sample calls. Nothing is sent from this demo.</p>
+    </section>
+
+    <section class="switcher" id="switcher" aria-label="Try another plan" hidden>
+      <details id="switch-details">
+        <summary>Try another plan</summary>
+        <p class="muted small sw-lead">Same number. Pick a plan, then call again to hear it.</p>
+        <div class="sw-opts" role="group" aria-label="Plans">
+          <button type="button" class="sw-opt" data-pkg-switch="coverage">
+            <span class="sw-name">Coverage Service <span class="pkg-price">$149/mo</span></span>
+            <span class="sw-desc">Answers missed and after-hours calls, takes the message, and texts Dave a recap.</span>
+            <span class="sw-now">Now set</span>
+          </button>
+          <button type="button" class="sw-opt" data-pkg-switch="intake">
+            <span class="sw-name">Intake Service <span class="pkg-price">$249/mo</span></span>
+            <span class="sw-desc">Coverage plus daytime overflow. The caller picks an estimate window, and Dave confirms it with one tap.</span>
+            <span class="sw-now">Now set</span>
+          </button>
+          <button type="button" class="sw-opt" data-pkg-switch="estimate">
+            <span class="sw-name">Estimate Request Service <span class="pkg-price">$349/mo</span></span>
+            <span class="sw-desc">Books the estimate live on the call and puts urgent calls straight through to Dave.</span>
+            <span class="sw-now">Now set</span>
+          </button>
+        </div>
+        <p class="muted small sw-status" id="sw-status" aria-live="polite"></p>
+        <a class="btn btn-ghost btn-sm call sw-call" id="sw-call" href="#" hidden>Call again</a>
+        <p class="note small" id="pkg-next" hidden>Your new pick takes effect on your next call.</p>
+      </details>
     </section>
 
     <p class="fine">Harborline Heating &amp; Air is a fictional demo shop. This demo line sends no texts, books nothing real, and can't transfer calls. Calls are limited to about 2&frac12; minutes and 3 calls per phone per day. Call details are wiped after about a day. <a href="/privacy.html">Privacy</a></p>
