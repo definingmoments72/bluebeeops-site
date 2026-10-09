@@ -5,8 +5,12 @@ The live home page, public/index.html, is hand-written static HTML with public/c
 Static assets on Workers serve /privacy -> privacy.html (html_handling: auto-trailing-slash).
 Images in public/img and the favicons come from assets/blue-bee-ops-logo.jpg via tools/build_images.py;
 this script only writes HTML and needs nothing beyond the standard library.
+Also generates public/faq/index.html from the web version of docs/faq/blue-bee-ops-faq.md.
 Run: python3 tools/build_pages.py"""
+import html
+import json
 import os
+import re
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
 UPDATED = "October 6, 2026"
 EMAIL = '<a href="mailto:definingmoments72@gmail.com">definingmoments72@gmail.com</a>'
@@ -802,8 +806,281 @@ def home_page():
 </html>
 """
 
+# ---------------------------------------------------------------------------------------------
+# Public FAQ page (/faq/). Wording comes verbatim from the web half of docs/faq/blue-bee-ops-faq.md
+# (everything above "## Spoken version"), so the page and its FAQPage JSON-LD always match the approved doc.
+# Styled with the dark home page's /css/home.css plus /css/faq.css. It never loads /js/home.js, which expects
+# home-page-only elements.
+# ---------------------------------------------------------------------------------------------
+
+FAQ_DOC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "faq", "blue-bee-ops-faq.md")
+FAQ_TITLE = "FAQ | Blue Bee Ops"
+FAQ_DESC = ("Straight answers for Kitsap County trades shops about Coverage Service, Blue Bee Ops' $149-a-month "
+            "missed-call and after-hours answering, and about who's behind it.")
+DARK_ICON_PHONE = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>')
+CALL_LABEL = "Call us about the Coverage plan"
+
+
+def slug(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def parse_faq(md):
+    """Parts -> sections -> questions, from the doc's web version. Blocks are ("p", text) or ("quote", [lines])."""
+    web = md.split("\n## Spoken version", 1)[0]
+    parts, part, sec, q, para = [], None, None, None, []
+
+    def flush():
+        if para:
+            text = " ".join(para)
+            (q["blocks"] if q else part["intro"]).append(("p", text))
+            para.clear()
+
+    for line in web.splitlines():
+        s = line.strip()
+        m_part = re.match(r"# Part (\d+): (.+)", s)
+        if m_part:
+            flush()
+            part = {"label": f"Part {m_part.group(1)}", "title": m_part.group(2), "intro": [], "sections": []}
+            parts.append(part)
+            sec = q = None
+            continue
+        if part is None:
+            continue
+        if s.startswith("## "):
+            flush()
+            sec = {"title": s[3:], "questions": []}
+            part["sections"].append(sec)
+            q = None
+        elif s.startswith("### "):
+            flush()
+            m_q = re.match(r"### (\d+)\. (.+)", s)
+            q = {"n": int(m_q.group(1)), "q": m_q.group(2), "blocks": []}
+            sec["questions"].append(q)
+        elif s.startswith(">"):
+            flush()
+            text = s.lstrip(">").strip()
+            if q["blocks"] and q["blocks"][-1][0] == "quote":
+                q["blocks"][-1][1].append(text)
+            else:
+                q["blocks"].append(("quote", [text]))
+        elif not s or s == "---":
+            flush()
+        else:
+            para.append(s)
+    flush()
+    return parts
+
+
+def faq_inline(text):
+    out = html.escape(text, quote=False)
+    out = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", out)
+    out = out.replace(PHONE_DISPLAY, f'<a href="{TEL}">{PHONE_DISPLAY}</a>')
+    out = out.replace(BIZ_EMAIL_ADDR, f'<a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a>')
+    out = out.replace("bluebeeops.com/demo", '<a href="/demo/">bluebeeops.com/demo</a>')
+    return out
+
+
+def faq_plain(blocks):
+    """Answer text for JSON-LD: the same words a visitor sees, one block per line."""
+    lines = []
+    for kind, val in blocks:
+        lines.extend(val if kind == "quote" else [val])
+    return "\n".join(re.sub(r"\*\*(.+?)\*\*", r"\1", l) for l in lines)
+
+
+def faq_answer_html(blocks):
+    out = []
+    for kind, val in blocks:
+        if kind == "p":
+            out.append(f"<p>{faq_inline(val)}</p>")
+        else:
+            first, *rest = val
+            lines = [f"<p><strong>{faq_inline(first)}</strong></p>"] + [f"<p>{faq_inline(l)}</p>" for l in rest]
+            out.append('<div class="msg msg-text faq-example">' + "".join(lines) + "</div>")
+    return "".join(out)
+
+
+def faq_page():
+    with open(FAQ_DOC, encoding="utf-8") as f:
+        parts = parse_faq(f.read())
+    questions = [q for p in parts for s in p["sections"] for q in s["questions"]]
+    ld = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "url": "https://bluebeeops.com/faq/",
+        "mainEntity": [{"@type": "Question", "name": q["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": faq_plain(q["blocks"])}} for q in questions],
+    }
+    ld_json = json.dumps(ld, indent=2, ensure_ascii=False).replace("</", "<\\/")
+
+    toc, body = [], []
+    for p in parts:
+        pid = slug(p["label"])
+        intro = "".join(f'\n          <p class="faq-part-intro">{faq_inline(t)}</p>' for _, t in p["intro"])
+        sections = []
+        for s in p["sections"]:
+            sid = slug(s["title"])
+            toc.append(f'<li><a href="#{sid}">{html.escape(s["title"], quote=False)}</a></li>')
+            items = "\n".join(
+                f'            <details class="glass" id="q{q["n"]}">\n'
+                f'              <summary>{html.escape(q["q"], quote=False)}</summary>\n'
+                f'              <div class="faq-answer">{faq_answer_html(q["blocks"])}</div>\n'
+                f'            </details>' for q in s["questions"])
+            sections.append(f"""          <section class="faq-section" id="{sid}" aria-labelledby="{sid}-heading">
+            <h3 id="{sid}-heading">{html.escape(s["title"], quote=False)}</h3>
+            <div class="faq-list">
+{items}
+            </div>
+          </section>""")
+        body.append(f"""      <section class="faq-part" id="{pid}" aria-labelledby="{pid}-heading">
+        <div class="container faq-narrow">
+          <p class="eyebrow">{p["label"]}</p>
+          <h2 id="{pid}-heading">{html.escape(p["title"], quote=False)}</h2>{intro}
+{chr(10).join(sections)}
+        </div>
+      </section>""")
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{FAQ_TITLE}</title>
+  <meta name="description" content="{FAQ_DESC}">
+  <link rel="canonical" href="https://bluebeeops.com/faq/">
+  <meta name="theme-color" content="#04060d">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Blue Bee Ops">
+  <meta property="og:title" content="Blue Bee Ops FAQ">
+  <meta property="og:description" content="{FAQ_DESC}">
+  <meta property="og:url" content="https://bluebeeops.com/faq/">
+  <meta property="og:image" content="https://bluebeeops.com/img/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/css/home.css">
+  <link rel="stylesheet" href="/css/faq.css">
+  <script type="application/ld+json">
+{ld_json}
+  </script>
+</head>
+<body class="faq-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header scrolled">
+    <div class="container">
+      <a class="brand" href="/" aria-label="Blue Bee Ops home">
+        <picture><source type="image/webp" srcset="/img/emblem-128.webp"><img src="/img/emblem-128.jpg" width="40" height="40" alt=""></picture>
+        <span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/#how">How it works</a>
+        <a href="/#plans">Plans</a>
+        <a href="/#about">About</a>
+        <a href="/faq/" aria-current="page">FAQ</a>
+      </nav>
+      <a class="btn btn-gold btn-sm" href="{TEL}" aria-label="{CALL_LABEL}">
+        {DARK_ICON_PHONE}
+        <span class="hide-sm">{CALL_LABEL}</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="main" class="faq">
+    <section class="faq-hero" aria-labelledby="faq-title">
+      <div class="faq-hero-glow" aria-hidden="true"></div>
+      <div class="container faq-narrow">
+        <p class="eyebrow">Common questions</p>
+        <h1 id="faq-title">Blue Bee Ops FAQ</h1>
+        <nav class="faq-toc" aria-label="FAQ sections">
+          <ul>
+            {(chr(10) + "            ").join(toc)}
+          </ul>
+        </nav>
+      </div>
+    </section>
+
+{chr(10).join(body)}
+
+    <section class="finale" aria-labelledby="finale-heading">
+      <div class="finale-glow" aria-hidden="true"></div>
+      <div class="container">
+        <p class="eyebrow">Talk to Jase</p>
+        <h2 id="finale-heading">Let's catch the calls you've been missing.</h2>
+        <p>Tell me a little about your shop and how you handle the phone now when you're out on a job. Have a question, or want to hear it answer? Just ask.</p>
+        <div class="faq-cta">
+          <a class="btn btn-gold btn-xl" href="{TEL}">
+            {DARK_ICON_PHONE}
+            <span>{CALL_LABEL}</span>
+          </a>
+          <a class="btn btn-glass" href="/demo/?package=coverage">Try a live demo call</a>
+        </div>
+        <p class="finale-email">Prefer email? <a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <picture><source type="image/webp" srcset="/img/emblem-128.webp"><img src="/img/emblem-128.jpg" width="56" height="56" alt="Blue Bee Ops logo" loading="lazy" decoding="async"></picture>
+          <div>
+            <span class="wordmark"><span class="bb">Blue Bee</span> <span class="ops">Ops</span></span>
+            <p>Missed-call and after-hours answering for trades shops in Kitsap County, Washington.</p>
+          </div>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <ul>
+            <li><a href="{TEL}">+1 {PHONE_DISPLAY}</a></li>
+            <li><a href="{MAILTO}">{BIZ_EMAIL_ADDR}</a></li>
+            <li>Kitsap County, WA</li>
+            <li><a href="/faq/" aria-current="page">FAQ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Texting &amp; policies</h2>
+          <ul>
+            <li><a href="/sms-consent">SMS Consent</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">SMS Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p>Jase Nations (Blue Bee Ops) · sole proprietor · Washington</p>
+        <p>
+          When Jase can't pick up, calls to +1 {PHONE_DISPLAY} are answered by an automated assistant that takes a message, and calls may be recorded.
+          Callers can choose to get one text confirming their message reached Jase. See <a href="/sms-consent">SMS Consent</a>,
+          the <a href="/privacy">Privacy Policy</a>, and the <a href="/terms">SMS Terms</a>.
+        </p>
+      </div>
+    </div>
+  </footer>
+  <script>
+    (() => {{
+      const openTarget = () => {{
+        const el = location.hash && document.getElementById(location.hash.slice(1));
+        if (el && el.tagName === "DETAILS") el.open = true;
+      }};
+      openTarget();
+      window.addEventListener("hashchange", openTarget);
+    }})();
+  </script>
+</body>
+</html>
+"""
+
+
 pages = {
     "classic/index.html": home_page(),
+    "faq/index.html": faq_page(),
     "sms-consent.html": page("SMS Consent | Jase Nations (Blue Bee Ops)",
                              "How callers opt in to one confirmation text from Jase Nations (Blue Bee Ops), +1 206-855-3743.",
                              consent("consent-heading") + RECORDING),
