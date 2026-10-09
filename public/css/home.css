@@ -236,7 +236,7 @@ section { position:relative; padding:5rem 0; }
   animation:halo 2.8s ease-in-out infinite; will-change:transform, opacity; }
 .plan .plan-actions .btn-demo { min-height:4rem; font-size:1.12rem; gap:.55rem;
   box-shadow:0 0 0 1px rgba(255,236,190,.65) inset, 0 12px 34px -10px rgba(217,180,106,.7); }
-.btn-demo svg { width:1.05em; height:1.05em; }
+.plan .plan-actions .btn-demo svg { width:1.05em; height:1.05em; }
 .btn-demo::after { animation:shimmer 6s ease-in-out 1.5s infinite; }
 .btn-demo:focus-visible { outline:2px solid #fff; outline-offset:4px; }
 .btn-outline-gold { color:var(--gold-2); background:transparent; border-color:var(--gold-line); text-align:center; text-wrap:balance; }
