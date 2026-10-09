@@ -39,7 +39,7 @@ A short greeting in your shop's name that we write together on your setup call, 
 Coverage screens out junk calls, so robocalls and sales pitches don't keep your phone buzzing.
 
 ### 9. Will my callers get a text back?
-Not yet. For now, the text comes to you, and you make the callback.
+Yes, if they want one. After it takes the message, Coverage offers the caller one text confirming their message reached you. It's optional and only goes out if they say yes. You still make the callback.
 
 ### 10. Does it remember repeat callers?
 That isn't a Coverage feature. Coverage takes each caller's name, number and what they need, texts it to you, and every call shows up in your daily report. If the demo greeted you by name on a second call, that's part of the demo only.
@@ -137,7 +137,7 @@ A short greeting in your shop's name that you and Jase write together. It tells 
 Robocalls and sales pitches get screened out, so your phone isn't buzzing for those.
 
 **9. Will my callers get a text back?**
-Not yet. For now, the text comes to you, and you make the callback.
+Yes, if they want one. Callers can say yes to one text confirming their message got to you, and you still make the callback.
 
 **10. Does it remember repeat callers?**
 That isn't part of Coverage. Each call gets texted to you and shows up in your daily report, and the greeting by name you may hear on this demo is a demo-only touch.
