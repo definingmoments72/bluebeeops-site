@@ -44,8 +44,11 @@ section { position:relative; padding:5rem 0; }
 .brand { display:flex; align-items:center; gap:.7rem; text-decoration:none; color:var(--text); }
 .brand picture { flex:0 0 40px; width:40px; height:40px; }
 .site-header .btn-gold { white-space:nowrap; flex:none; }
+.header-actions { display:flex; align-items:center; gap:.6rem; flex:none; }
+.cta-short { display:none; }
 @media (max-width: 359px) { .brand .wordmark { display:none; } }
-@media (max-width: 400px) { .site-header .container { gap:.6rem; } .brand { gap:.5rem; } .brand .wordmark { font-size:.8rem; letter-spacing:.12em; } .site-header .btn-gold { padding-inline:.8rem; } }
+@media (max-width: 460px) { .site-header .container { gap:.6rem; } .brand { gap:.5rem; } .brand .wordmark { font-size:.8rem; letter-spacing:.12em; } .site-header .btn-gold { padding-inline:.8rem; } .header-actions { gap:.45rem; } }
+@media (max-width: 414px) { .cta-full { display:none; } .cta-short { display:inline; } }
 .brand img { max-width:none; object-fit:cover; width:40px; height:40px; border-radius:50%; box-shadow:0 0 0 1px var(--gold-line), 0 0 18px rgba(75,123,255,.45); }
 .wordmark { font-weight:800; font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; white-space:nowrap; }
 .wordmark .bb { color:#c9d3ea; }
@@ -78,6 +81,17 @@ section { position:relative; padding:5rem 0; }
 .btn-xl small { display:block; font-size:.8rem; font-weight:600; letter-spacing:.06em; opacity:.75; margin-top:.15rem; }
 .btn-xl span { text-align:left; }
 .hide-sm { display:none; }
+/* Client login: a quiet outlined pill so the gold call button stays the one that pops. Icon-only (label kept for
+   screen readers) wherever the header is tight: phones, and the band where the desktop nav first appears. */
+.btn-login { color:#c9d3ea; background:transparent; border-color:var(--gold-line); font-weight:600; white-space:nowrap; }
+.btn-login:hover { color:var(--gold-2); border-color:var(--gold); background:rgba(217,180,106,.08); }
+.btn-login svg { color:var(--gold); }
+.site-header .btn-login { width:2.5rem; padding:0; }
+.site-header .btn-login .login-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+@media (min-width: 40rem) and (max-width: 55.99rem), (min-width: 62.5rem) {
+  .site-header .btn-login { width:auto; padding:.5rem 1rem; }
+  .site-header .btn-login .login-label { position:static; width:auto; height:auto; overflow:visible; clip:auto; clip-path:none; }
+}
 
 /* Hero */
 .hero { min-height:calc(100svh - 4.25rem); display:flex; align-items:center; padding:1.75rem 0 5rem; overflow:hidden; text-align:center; }
